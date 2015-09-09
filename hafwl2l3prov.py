@@ -281,6 +281,26 @@ def addQuestion():
             add = input('Add an additional back segment? [y/N]: ').lower().strip()
     return add[0]
 
+def pickPort(loc,PortList):
+    """
+    Evaluates availability of an input (xport) against PortList.
+    Returns xport once it is verified to be available.
+    """
+    while True:
+        try:
+            xport = int(input('Pick the next available port number (>=33) on mod '
+                                +loc.findmod()+' of '+loc.findsw()+'-'+loc.peerloc().findsw()+': '))
+            if not 33 <= xport <= 48:
+                print('ERROR: INVALID PORT NUMBER\n')
+            elif xport in PortList:
+                print('ERROR: The selected port number is already taken!\n')
+            else:
+                print('OK')
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID\n')
+    return xport
+
 def getInterfaceIP(interfaceName):
     while True:
         try:
@@ -347,40 +367,33 @@ def main():
     
     ##################### LOOP - BACK SEGMENTS ADDITIONS #########################
     while add_more_segment == 'y':
-        try:
-            ###### SUB-ROUTINE: CHOOSE PORT ######
-            auxport = int(input('Pick the next available port number (>=33) on mod '
-                                +mfwloc.findmod()+' of '+mfwloc.findsw()+'-'+sfwloc.findsw()+': '))
-            if not 33 <= auxport <= 48:
-                print('ERROR: INVALID PORT NUMBER\n')
-            elif auxport in Ports:
-                print('ERROR: The selected port number is already taken!\n')
-            else:
-                print('OK')
-                Ports.append(auxport)
-                ###### SUB-ROUTINE: CREATE SEGMENT NAME ######
-                auxsegment = getUniqueSegmentName(SegmentsL)
-                Segments.append(auxsegment)
-                SegmentsL.append(auxsegment.lower())
-                ###### SUB-ROUTINE: CHOOSE VLAN ######
-                auxvlan = getVLAN(auxsegment,Vlans)
-                Vlans.append(auxvlan)
 
-                ###### SUB-ROUTINE: CHOOSE DEPTH CODE ######
-                auxdepth = getDepth('firewall','0102',Depths)
-                Depths.append(auxdepth)
+        ###### CHOOSE AUX PORT ######
+        auxport = pickPort(mfwloc,Ports)
+        Ports.append(auxport)
 
-                ###### SUB-ROUTINE: CHOOSE SUBNETS ######
-                SubnetLists.append(getSubnets(auxsegment))
+        ###### SUB-ROUTINE: CREATE SEGMENT NAME ######
+        auxsegment = getUniqueSegmentName(SegmentsL)
+        Segments.append(auxsegment)
+        SegmentsL.append(auxsegment.lower())
 
-                ###### IPS OPTION ######
-                [monitored,Sniff] = askifMonitor(ips,monitored,Sniff)
+        ###### SUB-ROUTINE: CHOOSE VLAN ######
+        auxvlan = getVLAN(auxsegment,Vlans)
+        Vlans.append(auxvlan)
 
-                ###### SUB-ROUTINE 'ADD?' ######
-                add_more_segment = addQuestion()
+        ###### SUB-ROUTINE: CHOOSE DEPTH CODE ######
+        auxdepth = getDepth('firewall','0102',Depths)
+        Depths.append(auxdepth)
 
-        except ValueError:
-            print('ERROR: DATA INVALID\n')
+        ###### SUB-ROUTINE: CHOOSE SUBNETS ######
+        SubnetLists.append(getSubnets(auxsegment))
+
+        ###### IPS OPTION ######
+        [monitored,Sniff] = askifMonitor(ips,monitored,Sniff)
+
+        ###### SUB-ROUTINE 'ADD?' ######
+        add_more_segment = addQuestion()
+
     ############################## END OF LOOP #################################
     ###### IPS MANAGEMENT
     if ips != 'none':
