@@ -146,6 +146,33 @@ def getVLAN(segment,Vlans):
             print('ERROR: DATA INVALID\n')
     return vlan
 
+def getIpsVLAN(devicetype,unprotectedVlan):
+    """
+    Returns an IPS management VLAN, trying to avoid an unprotected VLAN.
+    devicetype is either 'firewall' or loadbalancer'
+    """
+    while True:
+        try:
+            ipsVlan = int(input('Enter the VLAN ID of IPS mgmt: '))
+            if ipsVlan == unprotectedVlan:
+                print('WARNING: '+devicetype.upper()+' FRONT VLAN MAY BE EXPOSED TO THE INTERNET!\n')
+                ans = input('ARE YOU SURE TO PROCEED? [y/N]: ').lower().strip()
+                if ans[0] == 'y':
+                    print('OK - IPS mgmt VLAN is set to '+str(ipsVlan))
+                    break
+                elif ans[0] == 'n' or ans[0] == '':
+                    pass
+                else:
+                    print('ERROR: INVALID ANSWER\n')
+            elif ipsVlan <= 0 or 4096 < ipsVlan:
+                print('ERROR: DATA INVALID\n')
+            else:
+                print('OK')
+                break
+        except (ValueError, IndexError):
+            print('ERROR: DATA INVALID\n')
+    return ipsVlan
+
 def getDepth(devicetype,default,Depths):
     while True:
         try:
@@ -197,6 +224,24 @@ def getSubnets(segment):
         except ValueError:
             print('ERROR: INVALID ADDRESS/NETMASK FOUND\n')
     return subnets
+
+def getUniqueSegmentName(List):
+    """
+    Evaluates uniqueness of a lower-cased input (segmentName.lower()) against List.
+    Returns the input segmentName once uniqueness is validated.
+    """
+    while True:
+        try:
+            segmentName = input('Enter the friendly name of this segment: ').strip()
+            if segmentName.lower() in List:
+                print('ERROR: '+segmentName+' already exists!\n')
+            elif segmentName == '':
+                print('ERROR: DATA INVALID\n') 
+            else:
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID\n')
+    return segmentName
 
 def askifMonitor(ips,monitored,Sniff):
     while ips != 'none' and monitored < 2:
@@ -273,9 +318,11 @@ def main():
 
     ###### STANDARD BACK SEGMENT
     # 1. NAME:
-    backName = ''
-    while backName == '':
-        backName = input('Enter the friendly name of the standard back segment: ').strip()
+    Segments = ['front']  # FW segment names
+    SegmentsL = ['front'] # FW segment names with all chars lowered, for uniqueness checks.
+    backName = getUniqueSegmentName(SegmentsL)
+    Segments.append(backName)
+    SegmentsL.append(backName.lower())
 
     # 2. VLAN:
     backVlan = getVLAN(backName,Vlans)
@@ -293,17 +340,15 @@ def main():
     Sniff = ['n']
     [monitored,Sniff] = askifMonitor(ips,monitored,Sniff)
 
-    ##################### LOOP - BACK SEGMENTS ADDITIONS #########################
     Ports = [1,16]         # FW segment ports. First two for front & back (1,16) are fake.
-    Segments = ['fr',backName] # FW segment names
-    SegmentsL = ['fr',backName.lower()] # FW segment names with all chars lowered.
     SubnetLists = [frontnet,backnets]
     ########## SUB-ROUTINE 'ADD?' ##########
     add_more_segment = addQuestion()
     
-    ############# SUB-ROUTINE: CHOOSE PORT ###########
+    ##################### LOOP - BACK SEGMENTS ADDITIONS #########################
     while add_more_segment == 'y':
         try:
+            ###### SUB-ROUTINE: CHOOSE PORT ######
             auxport = int(input('Pick the next available port number (>=33) on mod '
                                 +mfwloc.findmod()+' of '+mfwloc.findsw()+'-'+sfwloc.findsw()+': '))
             if not 33 <= auxport <= 48:
@@ -313,21 +358,10 @@ def main():
             else:
                 print('OK')
                 Ports.append(auxport)
-                ############# SUB-ROUTINE: CREATE SEGMENT NAME ###########
-                while True:
-                    try:
-                        auxsegment = input('Enter the friendly name of this segment: ').strip()
-                        auxsegmentl = auxsegment.lower()
-                        if auxsegmentl in SegmentsL:
-                            print('ERROR: '+auxsegment+' already exists!\n')
-                        elif auxsegment == '':
-                            print('ERROR: DATA INVALID\n')                       
-                        else:
-                            Segments.append(auxsegment)
-                            SegmentsL.append(auxsegmentl)
-                            break
-                    except ValueError:
-                        print('ERROR: DATA INVALID\n')
+                ###### SUB-ROUTINE: CREATE SEGMENT NAME ######
+                auxsegment = getUniqueSegmentName(SegmentsL)
+                Segments.append(auxsegment)
+                SegmentsL.append(auxsegment.lower())
                 ###### SUB-ROUTINE: CHOOSE VLAN ######
                 auxvlan = getVLAN(auxsegment,Vlans)
                 Vlans.append(auxvlan)
@@ -342,7 +376,7 @@ def main():
                 ###### IPS OPTION ######
                 [monitored,Sniff] = askifMonitor(ips,monitored,Sniff)
 
-                ############### SUB-ROUTINE 'ADD?' ###############
+                ###### SUB-ROUTINE 'ADD?' ######
                 add_more_segment = addQuestion()
 
         except ValueError:
@@ -354,26 +388,8 @@ def main():
         print('\nNow choose the IPS management VLAN.\n'
               +'It can be any one of the VLANs that you allocated to this customer.\n'
               +'However, try avoiding a VLAN that is widely exposed to the Internet.')
-        while True:
-            try:
-                ipsmgtVlan = int(input('Enter the VLAN ID of IPS mgmt: '))
-                if ipsmgtVlan == frontVlan:
-                    print('WARNING: DEVICE FRONT VLAN MAY BE EXPOSED TO THE INTERNET!\n')
-                    ans = input('ARE YOU SURE TO PROCEED? [y/N]: ').lower().strip()
-                    if ans[0] == 'y':
-                        print('OK - IPS mgmt VLAN is set to '+str(ipsmgtVlan))
-                        break
-                    elif ans[0] == 'n' or ans[0] == '':
-                        pass
-                    else:
-                        print('ERROR: INVALID ANSWER\n')
-                elif ipsmgtVlan <= 0 or 4096 < ipsmgtVlan:
-                    print('ERROR: DATA INVALID\n')
-                else:
-                    print('OK')
-                    break
-            except (ValueError, IndexError):
-                print('ERROR: DATA INVALID\n')
+        ipsmgtVlan = getIpsVLAN('firewall',frontVlan)
+
         # 2. DEPTH CODE:
         ipsmgtDepth = getIPSDepth(Vlans,ipsmgtVlan,Depths)
     
