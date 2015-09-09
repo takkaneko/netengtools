@@ -9,30 +9,6 @@ from ipaddress import ip_address
 from ipaddress import ip_network
 from ipaddress import ip_interface
 
-def getInterfaceIP(interfaceName):
-    while True:
-        try:
-            interfaceIP = ip_interface(input('Enter an IP address of '+interfaceName+' (e.g., 192.168.0.5/28): '))
-            break
-        except ValueError:
-            print('ERROR: INVALID ADDRESS/NETMASK\n')
-    return interfaceIP
-
-def getSubnets(segment):
-    while True:
-        try:
-            nets = input('Enter a subnet or subnets separated by commas for '+segment+': ')
-            subnets = re.findall(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2})",nets)
-            if subnets != []:
-                for i,_ in enumerate(subnets):
-                    subnets[i] = ip_network(subnets[i])
-                break
-            else:
-                pass
-        except ValueError:
-            print('ERROR: INVALID ADDRESS/NETMASK FOUND\n')
-    return subnets
-
 def getUPA():
     """
     UPA stands for: username/password/allocation code.
@@ -140,11 +116,27 @@ def getHAdevices(devicetype):
         print("OK no IPS!")
     return [mfw,speed,mfwloc,sfw,sfwloc,ips,ipsloc]
 
+def showSummary(master,masterloc,secondary,secondaryloc,IPS,IPSloc):
+    if IPS != 'none':
+        Devices = [[master,masterloc],
+                   [secondary,secondaryloc],
+                   [IPS,IPSloc]]
+    else:
+        Devices = [[master,masterloc],
+                   [secondary,secondaryloc]]
+    output = '\n'
+    output += 'The standard front/back switchports of the devices that you entered:\n\n'
+    for sid,loc in Devices:
+        output += sid+' ('+loc+'):\n'
+        output += ' Front: '+loc.findsw()+' '+loc.findfrport()+'\n'
+        output += ' Back:  '+loc.findsw()+' '+loc.findbkport()+'\n\n'
+    print(output)
+
 def getVLAN(segment,Vlans):
     while True:
         try:
             vlan = int(input('Enter the VLAN ID of '+segment+': '))
-            if Vlans.__contains__(vlan):
+            if vlan in Vlans:
                 print('ERROR: The selected VLAN is already taken!\n')
             elif vlan <= 0 or 4096 < vlan:
                 print('ERROR: DATA INVALID\n')
@@ -160,7 +152,7 @@ def getDepth(devicetype,default,Depths):
             depth = input('\nEnter the depth code of this '+devicetype+' segment ['+default+']: ').strip() or default
             if not re.match(r"^0\d{3}$",depth):
                 print('ERROR: DATA INVALID\n')
-            elif Depths.__contains__(depth):
+            elif depth in Depths:
                 print('ERROR: The depth code already exists!\n')
             else:
                 break
@@ -169,11 +161,42 @@ def getDepth(devicetype,default,Depths):
     return depth
 
 def getIPSDepth(Vlans,ipsmgtVlan,Depths):
-    if Vlans.__contains__(ipsmgtVlan):
+    if ipsmgtVlan in Vlans:
         idx = Vlans.index(ipsmgtVlan)
         return Depths[idx]
     else:
         return getDepth('IPS management','0101',Depths)
+
+def remdup(List):
+    """
+    Removes duplicate entries from List: 
+    
+    >>> list
+    [1, 2, 3, 4, 5, 7, 4, 2, 4, 6, 3, 1]
+    >>> remdup(List)
+    [1, 2, 3, 4, 5, 7, 6]
+    """
+    List2 = []
+    for i in List:
+        if i not in List2:
+            List2.append(i)
+    return List2
+
+def getSubnets(segment):
+    while True:
+        try:
+            nets = input('Enter a subnet or subnets separated by commas for '+segment+': ')
+            subnets = re.findall(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2})",nets)
+            subnets = remdup(subnets) # Removes duplicate entries
+            if subnets != []:
+                for i,_ in enumerate(subnets):
+                    subnets[i] = ip_network(subnets[i])
+                break
+            else:
+                pass
+        except ValueError:
+            print('ERROR: INVALID ADDRESS/NETMASK FOUND\n')
+    return subnets
 
 def askifMonitor(ips,monitored,Sniff):
     while ips != 'none' and monitored < 2:
@@ -213,27 +236,24 @@ def addQuestion():
             add = input('Add an additional back segment? [y/N]: ').lower().strip()
     return add[0]
 
+def getInterfaceIP(interfaceName):
+    while True:
+        try:
+            interfaceIP = ip_interface(input('Enter an IP address of '+interfaceName+' (e.g., 192.168.0.5/28): '))
+            break
+        except ValueError:
+            print('ERROR: INVALID ADDRESS/NETMASK\n')
+    return interfaceIP
+
 def main():
-    ##### Prompts to provide username, password, and allocation code:
+    ##### Prompts to enter username, password, and allocation code:
     [username,password,alloccode] = getUPA()
 
     ##### Prompts to enter SIDs/speed/locations of HA pair & IPS:
     [mfw,speed,mfwloc,sfw,sfwloc,ips,ipsloc] = getHAdevices('firewall')
 
-    print()
-    print("The standard front/back switchports of the devices that you entered:\n\n")
-    print(mfw+' ('+mfwloc+'):')
-    print(' Front: '+mfwloc.findsw()+' '+mfwloc.findfrport())
-    print(' Back:  '+mfwloc.findsw()+' '+mfwloc.findbkport())
-    print()
-    print(sfw+' ('+sfwloc+'):')
-    print(' Front: '+sfwloc.findsw()+' '+sfwloc.findfrport())
-    print(' Back:  '+sfwloc.findsw()+' '+sfwloc.findbkport())
-    print()
-    if ips != 'none':
-        print(ips+' ('+ipsloc+'):')
-        print(' Front: '+ipsloc.findsw()+' '+ipsloc.findfrport())
-        print(' Back:  '+ipsloc.findsw()+' '+ipsloc.findbkport())
+    ###### Summary Output of Devices:
+    showSummary(mfw,mfwloc,sfw,sfwloc,ips,ipsloc)
 
     ###### FRONT SEGMENT
     # 1. VLAN:
@@ -288,7 +308,7 @@ def main():
                                 +mfwloc.findmod()+' of '+mfwloc.findsw()+'-'+sfwloc.findsw()+': '))
             if not 33 <= auxport <= 48:
                 print('ERROR: INVALID PORT NUMBER\n')
-            elif Ports.__contains__(auxport):
+            elif auxport in Ports:
                 print('ERROR: The selected port number is already taken!\n')
             else:
                 print('OK')
@@ -298,7 +318,7 @@ def main():
                     try:
                         auxsegment = input('Enter the friendly name of this segment: ').strip()
                         auxsegmentl = auxsegment.lower()
-                        if SegmentsL.__contains__(auxsegmentl):
+                        if auxsegmentl in SegmentsL:
                             print('ERROR: '+auxsegment+' already exists!\n')
                         elif auxsegment == '':
                             print('ERROR: DATA INVALID\n')                       
