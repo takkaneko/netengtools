@@ -114,6 +114,15 @@ class NWdevice(str):
         """
         return True if re.search('slb',self.type) else False
 
+    def is_fw_or_lb(self,devicetype):
+        """
+        Combining is_fw() and is_lb(). devicetype must be either 'firewall' or 'loadbalancer.'
+        """
+        if devicetype == 'firewall':
+            return True if re.search('fw',self.type) else False
+        else:
+            return True if re.search('slb',self.type) else False
+
     def is_ips(self):
         """
         Boolean that determines if the service id represents an ips or not.

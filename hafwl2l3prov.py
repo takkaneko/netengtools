@@ -33,7 +33,11 @@ def getSubnets(segment):
             print('ERROR: INVALID ADDRESS/NETMASK FOUND\n')
     return subnets
 
-def main():
+def getUPA():
+    """
+    UPA stands for: username/password/allocation code.
+    Prompts to enter these information.
+    """
     username = ''
     while username == '':
         username = input("Enter your tacacs username: ")
@@ -45,10 +49,26 @@ def main():
     while alloccode == '':
         alloccode = input('Enter an allocation code: ').lower().strip()
     print('OK')
+    
+    return [username,password,alloccode]
+
+def getHAdevices(devicetype):
+    """
+    devicetype must be either 'firewall' or 'loadbalancer.'
+    Prompts to enter SIDs/speed/locations of HA pair & IPS (w/ their error handlings).
+    Returns the provided data as a list for use in main().
+    
+    mfw = master device ID (firewall or loadbalancer)
+    speed = 1000 or 100 (int)
+    mfwloc = master device location
+    sfw = secondary device ID (firewall or loadbalancer)
+    sfwloc = secondary device location
+    ips = IPS ID or 'none'
+    """
     while True:
         try:
-            mfw = input("Enter the master firewall ID: ").lower().strip()
-            if NWdevice(mfw).is_master() and NWdevice(mfw).is_fw():
+            mfw = input("Enter the master "+devicetype+" ID: ").lower().strip()
+            if NWdevice(mfw).is_master() and NWdevice(mfw).is_fw_or_lb(devicetype):
                 mfw = NWdevice(mfw)
                 break
             else:
@@ -56,6 +76,7 @@ def main():
         except AttributeError:
             print('ERROR: SERVICE ID INVALID\n')
     while True:
+
         try:
             speed = input('Enter the interface speed (Mbps)[1000]: ').strip() or '1000'
             if not re.match(r"^10{2,3}$",speed):
@@ -80,8 +101,8 @@ def main():
             sfw = mfw.peersid()
             break
         except UnboundLocalError:
-            print('\nThis case requires you to provide a secondary firewall ID manually.')
-            sfw = input('Enter the secondary firewall ID: ').lower().strip()
+            print('\nThis case requires you to provide a secondary '+devicetype+' ID manually.')
+            sfw = input('Enter the secondary '+devicetype+' ID: ').lower().strip()
             if re.match(r"^(netsvc)+(\d{5})$", sfw) and NWdevice(sfw) != mfw:
                 break
             elif re.match(r"^(netsvc)+(\d{5})$", sfw) and NWdevice(sfw) == mfw:
@@ -115,7 +136,90 @@ def main():
             except AttributeError:
                 print("ERROR: SYNTAX INVALID\n")
     else:
+        ipsloc = ''
         print("OK no IPS!")
+    return [mfw,speed,mfwloc,sfw,sfwloc,ips,ipsloc]
+
+def getVLAN(segment,Vlans):
+    while True:
+        try:
+            vlan = int(input('Enter the VLAN ID of '+segment+': '))
+            if Vlans.__contains__(vlan):
+                print('ERROR: The selected VLAN is already taken!\n')
+            elif vlan <= 0 or 4096 < vlan:
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID\n')
+    return vlan
+
+def getDepth(devicetype,default,Depths):
+    while True:
+        try:
+            depth = input('\nEnter the depth code of this '+devicetype+' segment ['+default+']: ').strip() or default
+            if not re.match(r"^0\d{3}$",depth):
+                print('ERROR: DATA INVALID\n')
+            elif Depths.__contains__(depth):
+                print('ERROR: The depth code already exists!\n')
+            else:
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID\n')
+    return depth
+
+def getIPSDepth(Vlans,ipsmgtVlan,Depths):
+    if Vlans.__contains__(ipsmgtVlan):
+        idx = Vlans.index(ipsmgtVlan)
+        return Depths[idx]
+    else:
+        return getDepth('IPS management','0101',Depths)
+
+def askifMonitor(ips,monitored,Sniff):
+    while ips != 'none' and monitored < 2:
+        try:
+            answer = input('Monitored by IPS? [y/N]: ').lower().strip()
+            if answer[0] == 'y':
+                monitored += 1
+                Sniff.append('y')
+                print('OK - Set to be monitored by IPS!')
+                break
+            elif answer[0] == 'n':
+                Sniff.append('n')
+                print('OK')
+                break
+            else:
+                print('ERROR: INVALID ANSWER\n')
+        except IndexError:
+            print('ERROR: DATA INVALID\n')
+    if ips == 'none' or monitored == 2:
+        Sniff.append('n')
+    return [monitored,Sniff]
+
+def addQuestion():
+    add = input('Add an additional back segment? [y/N]: ').lower().strip()
+    while True:
+        try:
+            if add[0] == 'y':
+                break
+            elif add[0] == 'n':
+                print('OK - no additional segment')
+                break
+            else:
+                print('ERROR: INVALID ANSWER\n')
+                add = input('Add an additional back segment? [y/N]: ').lower().strip()
+        except IndexError:
+            print('ERROR: INVALID ANSWER\n')
+            add = input('Add an additional back segment? [y/N]: ').lower().strip()
+    return add[0]
+
+def main():
+    ##### Prompts to provide username, password, and allocation code:
+    [username,password,alloccode] = getUPA()
+
+    ##### Prompts to enter SIDs/speed/locations of HA pair & IPS:
+    [mfw,speed,mfwloc,sfw,sfwloc,ips,ipsloc] = getHAdevices('firewall')
+
     print()
     print("The standard front/back switchports of the devices that you entered:\n\n")
     print(mfw+' ('+mfwloc+'):')
@@ -131,104 +235,54 @@ def main():
         print(' Front: '+ipsloc.findsw()+' '+ipsloc.findfrport())
         print(' Back:  '+ipsloc.findsw()+' '+ipsloc.findbkport())
 
-    ######################### FRONT SEGMENT VLAN #########################
-    while True:
-        try:
-            frontVlan = int(input('\nEnter the VLAN ID of the firewall front: '))
-            if frontVlan <= 0 or 4096 < frontVlan:
-                print('ERROR: DATA INVALID\n')
-            else:
-                break
-        except ValueError:
-            print('ERROR: DATA INVALID')
-    ###################### FRONT SEGMENT DEPTHCODE ######################
-    while True:
-        try:
-            frontdepth = input('\nEnter the depth code of the firewall front [0001]: ').strip() or '0001'
-            if not re.match(r"^0\d{3}$",frontdepth):
-                print('ERROR: DATA INVALID\n')
-            else:
-                break
-        except ValueError:
-            print('ERROR: DATA INVALID\n')
-    ####################### FRONT SEGMENT SUBNETS ########################
-    frontnet = getSubnets('the firewall front')
+    ###### FRONT SEGMENT
+    # 1. VLAN:
+    Vlans = [] # FW vlans. ipsmgtVlan will not be included.
+    frontVlan = getVLAN('the firewall front',Vlans)
+    Vlans.append(frontVlan)
 
+    # 2. DEPTHCODE:
+    Depths = []
+    frontdepth = getDepth('firewall','0001',Depths)
+    Depths.append(frontdepth)
+
+    # 3. SUBNETS:
+    frontnet = getSubnets('the firewall front')
 
     print('OK\nNow let\'s define firewall back segments, one by one.\n')
 
-    ##################### STANDARD BACK SEGMENT NAME #####################
+    ###### STANDARD BACK SEGMENT
+    # 1. NAME:
     backName = ''
     while backName == '':
         backName = input('Enter the friendly name of the standard back segment: ').strip()
-    ##################### STANDARD BACK SEGMENT VLAN #####################
-    while True:
-        try:
-            backVlan = int(input('Enter the VLAN ID of '+backName+': '))
-            if frontVlan == backVlan:
-                print('ERROR: '+backName+' VLAN cannot be the same as the front VLAN!\n')
-            elif backVlan <= 0 or 4096 < backVlan:
-                print('ERROR: DATA INVALID\n')
-            else:
-                break
-        except ValueError:
-            print('ERROR: DATA INVALID\n')
-    ####################### BACK SEGMENT DEPTHCODE #######################
-    while True:
-        try:
-            backdepth = input('\nEnter the depth code of the firewall back [0101]: ').strip() or '0101'
-            if not re.match(r"^0\d{3}$",backdepth):
-                print('ERROR: DATA INVALID\n')
-            else:
-                break
-        except ValueError:
-            print('ERROR: DATA INVALID\n')
-    ####################### BACK SEGMENT SUBNETS ########################
+
+    # 2. VLAN:
+    backVlan = getVLAN(backName,Vlans)
+    Vlans.append(backVlan)
+
+    # 3. DEPTHCODE:
+    backdepth = getDepth('firewall','0101',Depths)
+    Depths.append(backdepth)
+
+    # 4. SUBNETS:
     backnets = getSubnets(backName)
-    ######################### STANDARD BACK IPS QUESTION #########################
+
+    # 5. IPS QUESTION:
     monitored = 0
-    if ips != 'none':
-        while True:
-            try:
-                ans1 = input('Monitored by IPS? [y/N]: ').lower().strip()
-                if ans1[0] == 'y':
-                    monitored += 1
-                    print('OK - Set to be monitored by IPS!')
-                    break
-                elif ans1[0] == 'n':
-                    print('OK')
-                    break
-                else:
-                    print('ERROR: INVALID ANSWER\n')
-            except IndexError:
-                print('ERROR: DATA INVALID\n')
-    else:
-        ans1 = 'n'
+    Sniff = ['n']
+    [monitored,Sniff] = askifMonitor(ips,monitored,Sniff)
+
     ##################### LOOP - BACK SEGMENTS ADDITIONS #########################
     Ports = [1,16]         # FW segment ports. First two for front & back (1,16) are fake.
     Segments = ['fr',backName] # FW segment names
     SegmentsL = ['fr',backName.lower()] # FW segment names with all chars lowered.
-    Sniff = ['n',ans1[0]]
-    Vlans = [frontVlan,backVlan]    # FW vlans. ipsmgtVlan not included.
-    Depths = [frontdepth,backdepth]
     SubnetLists = [frontnet,backnets]
     ########## SUB-ROUTINE 'ADD?' ##########
-    add = input('Add an additional back segment? [y/N]: ').lower().strip()
-    while True:
-        try:
-            if add[0] == 'y':
-                break
-            elif add[0] == 'n' or add == '':
-                print('OK - no additional segment')
-                break
-            else:
-                print('ERROR: INVALID ANSWER\n')
-                add = input('Add an additional back segment? [y/N]: ').lower().strip()
-        except IndexError:
-            print('ERROR: INVALID ANSWER\n')
-            add = input('Add an additional back segment? [y/N]: ').lower().strip()
+    add_more_segment = addQuestion()
+    
     ############# SUB-ROUTINE: CHOOSE PORT ###########
-    while add[0] == 'y':
+    while add_more_segment == 'y':
         try:
             auxport = int(input('Pick the next available port number (>=33) on mod '
                                 +mfwloc.findmod()+' of '+mfwloc.findsw()+'-'+sfwloc.findsw()+': '))
@@ -254,75 +308,29 @@ def main():
                             break
                     except ValueError:
                         print('ERROR: DATA INVALID\n')
-                ################ SUB-ROUTINE: CHOOSE VLAN ################
-                while True:
-                    try:
-                        auxvlan = int(input('Enter the VLAN ID of '+auxsegment+': '))
-                        if Vlans.__contains__(auxvlan):
-                            print('ERROR: The selected VLAN is already taken!\n')
-                        elif auxvlan <= 0 or 4096 < auxvlan:
-                            print('ERROR: DATA INVALID\n')
-                        else:
-                            Vlans.append(auxvlan)
-                            break
-                    except ValueError:
-                        print('ERROR: DATA INVALID\n')
-                ############## SUB-ROUTINE: CHOOSE DEPTH CODE ############
-                while True:
-                    try:
-                        auxdepth = input('Enter the depth code of this back segment: ').strip()
-                        if not re.match(r"^0\d{3}$",auxdepth):
-                            print('ERROR: DATA INVALID\n')
-                        elif Depths.__contains__(auxdepth):
-                            print('ERROR: The depth code already exists!\n')
-                        else:
-                            Depths.append(auxdepth)
-                            break
-                    except ValueError:
-                        print('ERROR: DATA INVALID\n')
-                ############### SUB-ROUTINE: CHOOSE SUBNETS ###############
+                ###### SUB-ROUTINE: CHOOSE VLAN ######
+                auxvlan = getVLAN(auxsegment,Vlans)
+                Vlans.append(auxvlan)
+
+                ###### SUB-ROUTINE: CHOOSE DEPTH CODE ######
+                auxdepth = getDepth('firewall','0102',Depths)
+                Depths.append(auxdepth)
+
+                ###### SUB-ROUTINE: CHOOSE SUBNETS ######
                 SubnetLists.append(getSubnets(auxsegment))
-                ######################### IPS OPTION #########################
-                while ips != 'none' and monitored < 2:
-                    try:
-                        ans2 = input('Monitored by IPS? [y/N]: ').lower().strip()
-                        if ans2[0] == 'y':
-                            monitored += 1
-                            Sniff.append('y')
-                            print('OK - Set to be monitored by IPS!')
-                            break
-                        elif ans2[0] == 'n':
-                            Sniff.append('n')
-                            print('OK')
-                            break
-                        else:
-                            print('ERROR: INVALID ANSWER\n')
-                    except IndexError:
-                        print('ERROR: DATA INVALID\n')
-                if ips == 'none' or monitored == 2:
-                    Sniff.append('n')
-                ###################### END OF IPS OPTION ######################
+
+                ###### IPS OPTION ######
+                [monitored,Sniff] = askifMonitor(ips,monitored,Sniff)
+
                 ############### SUB-ROUTINE 'ADD?' ###############
-                add = input('Add an additional back segment? [y/N]: ').lower().strip()
-                while True:
-                    try:
-                        if add[0] == 'y':
-                            break
-                        elif add[0] == 'n' or add == '':
-                            print('OK - no additional segment\n')
-                            break
-                        else:
-                            print('ERROR: INVALID ANSWER\n')
-                            add = input('Add an additional back segment? [y/N]: ').lower().strip()
-                    except IndexError:
-                        print('ERROR: INVALID ANSWER\n')
-                        add = input('Add an additional back segment? [y/N]: ').lower().strip()
-                ################# END OF 'ADD?' #################
+                add_more_segment = addQuestion()
+
         except ValueError:
             print('ERROR: DATA INVALID\n')
     ############################## END OF LOOP #################################
-    ############################ IPS MANAGEMENT VLAN ############################
+    ###### IPS MANAGEMENT
     if ips != 'none':
+        # 1. VLAN:
         print('\nNow choose the IPS management VLAN.\n'
               +'It can be any one of the VLANs that you allocated to this customer.\n'
               +'However, try avoiding a VLAN that is widely exposed to the Internet.')
@@ -330,7 +338,7 @@ def main():
             try:
                 ipsmgtVlan = int(input('Enter the VLAN ID of IPS mgmt: '))
                 if ipsmgtVlan == frontVlan:
-                    print('WARNING: FIREWALL FRONT VLAN MAY BE EXPOSED TO THE INTERNET!\n')
+                    print('WARNING: DEVICE FRONT VLAN MAY BE EXPOSED TO THE INTERNET!\n')
                     ans = input('ARE YOU SURE TO PROCEED? [y/N]: ').lower().strip()
                     if ans[0] == 'y':
                         print('OK - IPS mgmt VLAN is set to '+str(ipsmgtVlan))
@@ -346,26 +354,12 @@ def main():
                     break
             except (ValueError, IndexError):
                 print('ERROR: DATA INVALID\n')
-    ######################### IPS MANAGEMENT DEPTH CODE #########################
-    if ips != 'none':
-        if Vlans.__contains__(ipsmgtVlan):
-            idx = Vlans.index(ipsmgtVlan)
-            ipsmgtDepth = Depths[idx]
-        else:
-            while True:
-                try:
-                    ipsmgtDepth = input('Enter the depth code of VLAN '+str(ipsmgtVlan)+': ').strip()
-                    if not re.match(r"^0\d{3}$",ipsmgtDepth):
-                        print('ERROR: DATA INVALID\n')
-                    elif Depths.__contains__(ipsmgtDepth):
-                        print('ERROR: The depth code already exists!\n')
-                    else:
-                        print('OK')
-                        break
-                except ValueError:
-                    print('ERROR: DATA INVALID\n')
-    ######################### IPS MANAGEMENT IP ADDRESS #########################
-    ipsmgtIPaddr = getInterfaceIP('the IPS management')
+        # 2. DEPTH CODE:
+        ipsmgtDepth = getIPSDepth(Vlans,ipsmgtVlan,Depths)
+    
+        # 3. IP ADDRESS:
+        ipsmgtIPaddr = getInterfaceIP('the IPS management')
+
     #############################################################################
     print('\nThe rest will generate port configs, custom cabling info, allocation form, etc.\n')
     
@@ -598,7 +592,7 @@ def main():
         ipsform += '               port: '+ipsloc.findbkport()+' (Green cable)\n'
         ipsform += '          speed/dup: 100M/Full\n'
         ipsform += '   VLAN (Num/Label): '+str(ipsmgtVlan)+'/'+ipsloc.room+'r'+str("%02d" % int(ipsloc.row))+'-'+alloccode+'-'+ipsmgtDepth+'\n\n'
-        if ans1[0] == 'y':
+        if Sniff[1] == 'y':
             ipsform += 'IPS inline port 1A\n\n'
             ipsform += '      connection to: '+mfw+'\n'
             ipsform += '               port: '+nokiaPorts[1]+'\n'
