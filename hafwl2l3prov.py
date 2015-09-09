@@ -148,7 +148,7 @@ def getVLAN(segment,Vlans):
 
 def getIpsVLAN(devicetype,unprotectedVlan):
     """
-    Returns an IPS management VLAN, trying to avoid an unprotected VLAN.
+    Returns an IPS management VLAN, trying to avoid potentially an unprotected VLAN.
     devicetype is either 'firewall' or loadbalancer'
     """
     while True:
@@ -360,38 +360,38 @@ def main():
     Sniff = ['n']
     [monitored,Sniff] = askifMonitor(ips,monitored,Sniff)
 
-    Ports = [1,16]         # FW segment ports. First two for front & back (1,16) are fake.
+    Ports = [1,16]  # FW segment ports. First two for front & back (1,16) are fake.
     SubnetLists = [frontnet,backnets]
-    ########## SUB-ROUTINE 'ADD?' ##########
+    ###### 'ADD?' ######
     add_more_segment = addQuestion()
     
-    ##################### LOOP - BACK SEGMENTS ADDITIONS #########################
+    #################### LOOP - BACK SEGMENTS ADDITIONS ########################
     while add_more_segment == 'y':
 
         ###### CHOOSE AUX PORT ######
         auxport = pickPort(mfwloc,Ports)
         Ports.append(auxport)
 
-        ###### SUB-ROUTINE: CREATE SEGMENT NAME ######
+        ###### CREATE SEGMENT NAME ######
         auxsegment = getUniqueSegmentName(SegmentsL)
         Segments.append(auxsegment)
         SegmentsL.append(auxsegment.lower())
 
-        ###### SUB-ROUTINE: CHOOSE VLAN ######
+        ###### CHOOSE VLAN ######
         auxvlan = getVLAN(auxsegment,Vlans)
         Vlans.append(auxvlan)
 
-        ###### SUB-ROUTINE: CHOOSE DEPTH CODE ######
+        ###### CHOOSE DEPTH CODE ######
         auxdepth = getDepth('firewall','0102',Depths)
         Depths.append(auxdepth)
 
-        ###### SUB-ROUTINE: CHOOSE SUBNETS ######
+        ###### CHOOSE SUBNETS ######
         SubnetLists.append(getSubnets(auxsegment))
 
         ###### IPS OPTION ######
         [monitored,Sniff] = askifMonitor(ips,monitored,Sniff)
 
-        ###### SUB-ROUTINE 'ADD?' ######
+        ###### 'ADD?' ######
         add_more_segment = addQuestion()
 
     ############################## END OF LOOP #################################
