@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # boreasprov.py
 
-import re
-import getpass
-import hafwprov
+import hafwl2l3prov
 
 def main():
     title ='\n*********************************\n'
@@ -11,8 +9,8 @@ def main():
     title += '*********************************\n\n'
     title += 'Please select your provisioning task from the following menus:\n'
     print(title)
-    options =  '1. HA firewall (CP IP390/560 series or ASA series)\n'
-    options += '2. Stand-alone firewall (UTM series or ASA10)\n'
+    options =  '1. HA firewall (CP IP390/560 series or ASA5500 series)\n'
+    options += '2. Stand-alone firewall (UTM series or ASA5500 series)\n'
     options += '3. HA Alteon4408\n'
     options += '4. Stand-alone Alteon4408\n'
     options += '5. IPS only (when monitoring multiple devices)\n'
@@ -29,7 +27,7 @@ def main():
 
     if choice == 1:
         print('Starting HA firewall provisioning...\n')
-        hafwprov.main()
+        hafwl2l3prov.main()
     if choice == 2:
         print('Starting stand-alone firewall provisioning...\n')
         fwprov.main()
