@@ -15,7 +15,7 @@ import re
 # asa10hamfw16000
 # asa25hamfw20003
 # asa50hamfw20001
-# asa50hamfw10001
+# asa85hamfw10001
 # pixhamfw10027 - unsupported
 
 # Stand-alone FW/LB SIDs:
@@ -104,6 +104,15 @@ class NWdevice(str):
             digits = p6.match(sid).group(3)
             self.digits = digits
 
+    def findVendor(self):
+        """
+        Returns 'cisco' or 'nokia'
+        """
+        if self.model in ['nokia39','nokia56','chkp40','chkp20','chkp13']:
+            return 'nokia'
+        elif self.model in ['asa10','asa25','asa50','asa85']:
+            return 'cisco'
+    
     def is_master(self):
         """
         Boolean that determines if the service id represents a master device or not.

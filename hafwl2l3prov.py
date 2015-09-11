@@ -631,8 +631,11 @@ def main():
     firewallForm += 'Firewall Network Unit: Infra 4.0, equipment racks: '+mfwloc.row+'-'+mfwloc.rack_noa+', '+sfwloc.row+'-'+sfwloc.rack_noa+'\n\n'
     firewallForm += 'Firewalls Front (Network '+frontdepth+')\n\n'
     firewallForm += '  Physical Interface: '+availPorts[0]+'\n\n'
-    firewallForm += '  Firewall Front-VRRP Interface:   '+str(frontnet[0][4])+'\n'
-    firewallForm += '  Master Firewall Front Interface: '+str(frontnet[0][5])+'\n'
+    if mfw.findVendor() == 'cisco':
+        firewallForm += '  Master Firewall Front Interface: '+str(frontnet[0][4])+'\n'
+    else:
+        firewallForm += '  Firewall Front-VRRP Interface:   '+str(frontnet[0][4])+'\n'
+        firewallForm += '  Master Firewall Front Interface: '+str(frontnet[0][5])+'\n'
     firewallForm += '  Backup Firewall Front Interface: '+str(frontnet[0][6])+'\n\n'
     firewallForm += '  Default Gateway:  '+str(frontnet[0][1])+'\n'
     firewallForm += '  Front Network:    '+str(frontnet[0])+'\n'
@@ -647,8 +650,11 @@ def main():
     firewallForm += 'Firewalls Backs:\n\n'
     firewallForm += '**'+backName+' (Network '+backdepth+')\n\n'
     firewallForm += '  Physical Interface: '+availPorts[1]+'\n\n'
-    firewallForm += '  Firewall Back-VRRP Interface:   '+str(backnets[0][1])+' (gateway for ???)\n'
-    firewallForm += '  Master Firewall Back Interface: '+str(backnets[0][2])+'\n'
+    if mfw.findVendor() == 'cisco':
+        firewallForm += '  Master Firewall Back Interface: '+str(backnets[0][1])+' (gateway for ???)\n'
+    else:
+        firewallForm += '  Firewall Back-VRRP Interface:   '+str(backnets[0][1])+' (gateway for ???)\n'
+        firewallForm += '  Master Firewall Back Interface: '+str(backnets[0][2])+'\n'
     firewallForm += '  Backup Firewall Back Interface: '+str(backnets[0][3])+'\n\n'
     firewallForm += '  Back Network:      '+str(backnets[0])+'\n'
     firewallForm += '  Back Netmask:      '+str(backnets[0].netmask)+'\n\n'
@@ -656,7 +662,11 @@ def main():
     if len(backnets) > 1:
         for backnet in backnets[1:]:
             firewallForm += ' *Add\'tl Alias for '+backName+':\n\n'
-            firewallForm += '  Firewall Back-VRRP Interface:   '+str(backnet[1])+'\n'
+            if mfw.findVendor() == 'cisco':
+                firewallForm += '  Master Firewall Back Interface: '+str(backnet[1])+' (gateway for ???)\n'
+            else:
+                firewallForm += '  Firewall Back-VRRP Interface:   '+str(backnet[1])+' (gateway for ???)\n'
+                firewallForm += '  Master Firewall Back Interface: '+str(backnet[2])+'\n'
             firewallForm += '  Master Firewall Back Interface: '+str(backnet[2])+'\n'
             firewallForm += '  Backup Firewall Back Interface: '+str(backnet[3])+'\n\n'
             firewallForm += '  Back Network:      '+str(backnet)+'\n'
@@ -673,8 +683,11 @@ def main():
     for segment in Segments[2:]:
         firewallForm += '**'+segment+' (Network '+Depths[auxIII]+')\n\n'
         firewallForm += '  Physical Interface: '+availPorts[auxIII]+'\n\n'
-        firewallForm += '  Firewall Back-VRRP Interface:   '+str(SubnetLists[auxIII][0][1])+' (gateway for ???)\n'
-        firewallForm += '  Master Firewall Back Interface: '+str(SubnetLists[auxIII][0][2])+'\n'
+        if mfw.findVendor() == 'cisco':
+            firewallForm += '  Master Firewall Back Interface: '+str(SubnetLists[auxIII][0][1])+' (gateway for ???)\n'
+        else:
+            firewallForm += '  Firewall Back-VRRP Interface:   '+str(SubnetLists[auxIII][0][1])+' (gateway for ???)\n'
+            firewallForm += '  Master Firewall Back Interface: '+str(SubnetLists[auxIII][0][2])+'\n'
         firewallForm += '  Backup Firewall Back Interface: '+str(SubnetLists[auxIII][0][3])+'\n\n'
         firewallForm += '  Back Network:      '+str(SubnetLists[auxIII][0])+'\n'
         firewallForm += '  Back Netmask:      '+str(SubnetLists[auxIII][0].netmask)+'\n\n'
@@ -682,8 +695,11 @@ def main():
         if len(SubnetLists[auxIII]) > 1:
             for aliasnet in SubnetLists[auxIII][1:]:
                 firewallForm += ' *Add\'tl Alias for '+Segments[auxIII]+':\n\n'
-                firewallForm += '  Firewall Back-VRRP Interface:   '+str(aliasnet[1])+'\n'
-                firewallForm += '  Master Firewall Back Interface: '+str(aliasnet[2])+'\n'
+                if mfw.findVendor() == 'cisco':
+                    firewallForm += '  Master Firewall Back Interface: '+str(aliasnet[1])+' (gateway for ???)\n'
+                else:
+                    firewallForm += '  Firewall Back-VRRP Interface:   '+str(aliasnet[1])+' (gateway for ???)\n'
+                    firewallForm += '  Master Firewall Back Interface: '+str(aliasnet[2])+'\n'
                 firewallForm += '  Backup Firewall Back Interface: '+str(aliasnet[3])+'\n\n'
                 firewallForm += '  Back Network:      '+str(aliasnet)+'\n'
                 firewallForm += '  Back Netmask:      '+str(aliasnet.netmask)+'\n\n'
