@@ -371,6 +371,8 @@ def chooseSyncInt(sid):
             syncinterface = input('Enter a sync interface, or type \'none\' ['+defaultsync(sid)+']: ').lower().strip() or defaultsync(sid)
             if syncinterface in devicePorts(sid):
                 break
+            else:
+                print('ERROR: INVALID DATA\n')
         except ValueError:
             print('ERROR: INVALID DATA\n')
     return syncinterface

@@ -70,7 +70,8 @@ class NWdevice(str):
             digits = p1.match(sid).group(4)
             self.digits = digits
         elif p2.match(sid):
-            self.model = 'unknown'
+            model = p2.match(sid).group(1)
+            self.model = model
             self.role = 'ham or has or stand-alone'
             self.type = 'fw or slb'
             self.digits = p2.match(sid).group(2)
@@ -95,7 +96,8 @@ class NWdevice(str):
             digits = p5.match(sid).group(3)
             self.digits = digits
         else:
-            self.model = 'unknown'
+            model = p6.match(sid).group(1)
+            self.model = model
             role = p6.match(sid).group(2)
             self.role = role
             self.type = 'fw or slb'
@@ -145,11 +147,18 @@ class NWdevice(str):
         """
         Returns an HA peer's service ID.
         """
-        if self.role == 'ham':
-            peer = self.model + 'has' + self.type + self.digits
-        elif self.role == 'has':
-            peer = self.model + 'ham' + self.type + self.digits
-        peer = NWdevice(peer)
+        if re.match(r"^(nokia39|nokia56|chkp40|chkp20|alteon|asa10|asa25|asa50|asa85)+(ham|has)+(fw|slb)+(\d{5})$",self):
+            if self.role == 'ham':
+                peer = self.model + 'has' + self.type + self.digits
+            elif self.role == 'has':
+                peer = self.model + 'ham' + self.type + self.digits
+            peer = NWdevice(peer)
+        else:
+            if self.role == 'ham':
+                peer = self.model + 'has' + self.digits
+            elif self.role == 'has':
+                peer = self.model + 'ham' + self.digits
+            peer = NWdevice(peer)
         return peer
     
 
