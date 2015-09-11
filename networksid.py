@@ -5,7 +5,10 @@ import re
 
 # HA FW/LB SIDs:
 
-# netsvc20043
+# netsvc20043 - two different 'netsvcXXXXX' devices *could* form an HA pair
+# netsvcham10060
+# chkp20hamfw12345
+# chkp40hamfw12345
 # nokia39hamfw10093
 # alteonhamslb10317
 # nokia56hamfw20002
@@ -13,7 +16,7 @@ import re
 # asa25hamfw20003
 # asa50hamfw20001
 # asa50hamfw10001
-# pixhamfw10027
+# pixhamfw10027 - unsupported
 
 # Stand-alone FW/LB SIDs:
 
@@ -22,6 +25,7 @@ import re
 # nokia29fw10030
 # chkp13fw10093
 # chkp20fw10001
+# chkp40fw10101
 # alteonslb10332
 # fw20002
 # asa10fw10001
@@ -50,11 +54,12 @@ class NWdevice(str):
     False
     """
     def __init__(self,sid):
-        p1 = re.compile(r"^(nokia39|nokia56|alteon|asa10|asa25|asa50|pix)+(ham|has)+(fw|slb)+(\d{5})$", re.IGNORECASE) # HA master/standby fw/lb
-        p2 = re.compile(r"^(netsvc)+(\d{5})$", re.IGNORECASE) # Generic network device
-        p3 = re.compile(r"^(nokia39|nokia56|nokia29|chkp13|chkp20|alteon|asa10|pix)+(fw|slb)+(\d{5})$", re.IGNORECASE) # Stand-alone fw/lb
+        p1 = re.compile(r"^(nokia39|nokia56|chkp40|chkp20|alteon|asa10|asa25|asa50|asa85)+(ham|has)+(fw|slb)+(\d{5})$", re.IGNORECASE) # HA master/standby fw/lb
+        p2 = re.compile(r"^(netsvc)+(\d{5})$", re.IGNORECASE) # Generic HA or non-HA network device
+        p3 = re.compile(r"^(nokia39|nokia56|nokia29|chkp13|chkp20|chkp40|alteon|asa10)+(fw|slb)+(\d{5})$", re.IGNORECASE) # Stand-alone fw/lb
         p4 = re.compile(r"^(fw)+(\d{5})$", re.IGNORECASE) # Unknown model firewall (Not common)
         p5 = re.compile(r"^(prgx4|prgx5|prvg100)+(aips)+(\d{5})$", re.IGNORECASE) # IPS
+        p6 = re.compile(r"^(netsvc)+(ham|has)+(\d{5})$", re.IGNORECASE) # Generic HA master/secondary network device
         if p1.match(sid):
             model = p1.match(sid).group(1)
             self.model = model
@@ -82,12 +87,19 @@ class NWdevice(str):
             self.role = 'stand-alone'
             self.type = 'fw'
             self.digits = p4.match(sid).group(2)
-        else:
+        elif p5.match(sid):
             model = p5.match(sid).group(1)
             self.model = model
             self.role = 'stand-alone'
             self.type = 'ips'
             digits = p5.match(sid).group(3)
+            self.digits = digits
+        else:
+            self.model = 'unknown'
+            role = p6.match(sid).group(2)
+            self.role = role
+            self.type = 'fw or slb'
+            digits = p6.match(sid).group(3)
             self.digits = digits
 
     def is_master(self):

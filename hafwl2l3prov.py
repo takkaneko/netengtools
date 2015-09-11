@@ -310,6 +310,71 @@ def getInterfaceIP(interfaceName):
             print('ERROR: INVALID ADDRESS/NETMASK\n')
     return interfaceIP
 
+def devicePorts(sid):
+    asa85Ports = ['gi0/0','gi0/1','gi0/2','gi0/3','gi0/4','gi0/5', # for standard network segments or sync
+                  'gi1/0','gi1/1','gi1/2','gi1/3','gi1/4','gi1/5', # for standard network segments or sync
+                  'gi0/6','gi0/7','gi0/8','gi0/9', # 10G ports for possible sync
+                  'gi1/6','gi1/7','gi1/8','gi1/9'] # 10G ports for possible sync
+    asa25or50Ports = ['gi0/0','gi0/1','gi0/2','gi0/3','gi0/4','gi0/5','gi0/6','gi0/7'] 
+    asa10Ports = ['gi0/0','gi0/1','gi0/2','gi0/3','gi0/4','gi0/5']
+    nokia3XXPorts = ['eth1','eth2','eth3','eth4',
+                     's1p1','s1p2','s1p3','s1p4',
+                     's2p1','s2p2','s2p3','s2p4'] 
+    UTM130Ports = ['EXT(5)','INT(1)','LAN1(2)','LAN2(3)','DMZ(4)']
+    nokia4400Ports = ['eth1','eth2','eth3','eth4','eth5','eth6','eth7','eth8']
+    nokia2200Ports = ['eth1','eth2','eth3','eth4','eth5','eth6']
+    alteonPorts = ['p1','p2','p3','p4','p5','p7','p8']
+    genericPorts = ['p1','p2','p3','p4','p5','p6','p7','p8','p9','p10']
+    if sid.model == 'asa85':
+        return asa85Ports
+    elif sid.model in ['asa25','asa50']:
+        return asa25or50Ports
+    elif sid.model == 'asa10':
+        return asa10Ports
+    elif sid.model == 'alteon':
+        return alteonPorts
+    elif sid.model == 'chkp13':
+        return UTM130Ports
+    elif sid.model == 'chkp40':
+        return nokia4400Ports
+    elif sid.model == 'chkp20':
+        return nokia2200Ports
+    elif sid.model in ['nokia39','nokia56']:
+        return nokia3XXPorts
+    else:
+        return genericPorts
+
+def defaultsync(sid):
+    """
+    sid must be an HA-capable device
+    """
+    if sid.model == 'asa85':
+        return 'gi1/5'
+    elif sid.model in ['asa25','asa50']:
+        return 'gi0/7'
+    elif sid.model == 'asa10':
+        return 'gi0/5'
+    elif sid.model == 'alteon':
+        return 'none'
+    elif sid.model == 'chkp40':
+        return 'eth8'
+    elif sid.model == 'chkp20':
+        return 'eth6'
+    elif sid.model in ['nokia39','nokia56']:
+        return 'eth4'
+    else:
+        return 'p10'
+
+def chooseSyncInt(sid):
+    while True:
+        try:
+            syncinterface = input('Enter a sync interface, or type \'none\' ['+defaultsync(sid)+']: ').lower().strip() or defaultsync(sid)
+            if syncinterface in devicePorts(sid):
+                break
+        except ValueError:
+            print('ERROR: INVALID DATA\n')
+    return syncinterface
+
 def main():
     ##### Prompts to enter username, password, and allocation code:
     [username,password,alloccode] = getUPA()
@@ -320,6 +385,11 @@ def main():
     ###### Summary Output of Devices:
     showSummary(mfw,mfwloc,sfw,sfwloc,ips,ipsloc)
 
+    ###### Prompts to select a sync port:
+    syncInt = chooseSyncInt(mfw)
+    availPorts = devicePorts(mfw)
+    availPorts.remove(syncInt)
+    
     ###### FRONT SEGMENT
     # 1. VLAN:
     Vlans = [] # FW vlans. ipsmgtVlan will not be included.
@@ -522,30 +592,28 @@ def main():
         (sync,bk,bks) = ('51','50','49')
     else:
         (sync,bk,bks) = ('44','43','42')
-    nokiaPorts = ['eth-1','eth-2','eth-3','s1p1','s1p2','s1p3','s1p4','s2p1','s2p2','s2p3','s2p4'] # eth4 is reserved for sync
-    asa25Ports = ['gi0/1','gi0/2','gi0/3','gi0/4','gi0/5','gi0/6'] # gi0/7 is for sync
     print('CUSTOM CABLING INFORMATION:')
     print('---------------------------\n')
     cabling = 'sysc:\n'
     x = nw_rs.index(rs)
-    cabling += '  '+mfw+' eth-4 -> YELLOW XOVER -> U'+sync+' YELLOW PANEL p'+str(x+1 if x<=15 else x-31)+'\n'
-    cabling += '  '+sfw+' eth-4 -> YELLOW STRAIGHT -> U'+sync+' YELLOW PANEL p'+str(x+1 if x<=15 else x-31)+'\n\n'
+    cabling += '  '+mfw+' '+syncInt+' -> YELLOW XOVER -> U'+sync+' YELLOW PANEL p'+str(x+1 if x<=15 else x-31)+'\n'
+    cabling += '  '+sfw+' '+syncInt+' -> YELLOW STRAIGHT -> U'+sync+' YELLOW PANEL p'+str(x+1 if x<=15 else x-31)+'\n\n'
     cumulative = 0
     if Sniff[1] == 'y':
         cumulative += 1
         cabling += backName+':\n'
-        cabling += '  '+mfw+' eth-2 -> GREEN XOVER -> '+ips+'port 1A\n'
+        cabling += '  '+mfw+' '+availPorts[1]+' -> GREEN XOVER -> '+ips+'port 1A\n'
         cabling += '  '+ips+' port 1B -> GREEN STRAIGHT -> U'+bk+' UPPER ORANGE PANEL p'+str(nw_rs.index(rs)%16+17)+'\n\n'
     auxII = 2
     for segment in Segments[2:]:
         cabling += segment+':\n'
         if Sniff[auxII] == 'y':
             cumulative += 1
-            cabling += '  '+mfw+' '+nokiaPorts[auxII]+' -> GREEN XOVER -> '+ips+' port '+str('1A' if cumulative == 1 else '2C')+'\n'
+            cabling += '  '+mfw+' '+availPorts[auxII]+' -> GREEN XOVER -> '+ips+' port '+str('1A' if cumulative == 1 else '2C')+'\n'
             cabling += '  '+ips+' port '+str('1B' if cumulative == 1 else '2D')+' -> GREEN STRAIGHT -> U'+bk+' UPPER ORANGE PANEL p'+str(Ports[auxII])+'\n'
         else:
-            cabling += '  '+mfw+' '+nokiaPorts[auxII]+' -> GREEN STRAIGHT -> U'+bk+' UPPER ORANGE PANEL p'+str(Ports[auxII])+'\n'
-        cabling += '  '+sfw+' '+nokiaPorts[auxII]+' -> GREEN STRAIGHT -> U'+bks+' LOWER ORANGE PANEL p'+str(Ports[auxII])+'\n\n'
+            cabling += '  '+mfw+' '+availPorts[auxII]+' -> GREEN STRAIGHT -> U'+bk+' UPPER ORANGE PANEL p'+str(Ports[auxII])+'\n'
+        cabling += '  '+sfw+' '+availPorts[auxII]+' -> GREEN STRAIGHT -> U'+bks+' LOWER ORANGE PANEL p'+str(Ports[auxII])+'\n\n'
         auxII += 1
     print(cabling)
     input('Hit Enter to view the firewall allocation form')
@@ -560,7 +628,7 @@ def main():
     firewallForm += 'Backup Rack/Console Loc.Code:  '+sfwloc+'\n'
     firewallForm += 'Firewall Network Unit: Infra 4.0, equipment racks: '+mfwloc.row+'-'+mfwloc.rack_noa+', '+sfwloc.row+'-'+sfwloc.rack_noa+'\n\n'
     firewallForm += 'Firewalls Front (Network '+frontdepth+')\n\n'
-    firewallForm += '  Physical Interface: '+nokiaPorts[0]+'\n\n'
+    firewallForm += '  Physical Interface: '+availPorts[0]+'\n\n'
     firewallForm += '  Firewall Front-VRRP Interface:   '+str(frontnet[0][4])+'\n'
     firewallForm += '  Master Firewall Front Interface: '+str(frontnet[0][5])+'\n'
     firewallForm += '  Backup Firewall Front Interface: '+str(frontnet[0][6])+'\n\n'
@@ -576,7 +644,7 @@ def main():
     firewallForm += '  INFRA4.0 VLAN (Num/Label):   '+str(frontVlan)+'/'+mfwloc.room+'r'+str("%02d" % int(mfwloc.row))+'-'+alloccode+'-'+frontdepth+'\n\n'
     firewallForm += 'Firewalls Backs:\n\n'
     firewallForm += '**'+backName+' (Network '+backdepth+')\n\n'
-    firewallForm += '  Physical Interface: '+nokiaPorts[1]+'\n\n'
+    firewallForm += '  Physical Interface: '+availPorts[1]+'\n\n'
     firewallForm += '  Firewall Back-VRRP Interface:   '+str(backnets[0][1])+' (gateway for ???)\n'
     firewallForm += '  Master Firewall Back Interface: '+str(backnets[0][2])+'\n'
     firewallForm += '  Backup Firewall Back Interface: '+str(backnets[0][3])+'\n\n'
@@ -602,7 +670,7 @@ def main():
     auxIII = 2
     for segment in Segments[2:]:
         firewallForm += '**'+segment+' (Network '+Depths[auxIII]+')\n\n'
-        firewallForm += '  Physical Interface: '+nokiaPorts[auxIII]+'\n\n'
+        firewallForm += '  Physical Interface: '+availPorts[auxIII]+'\n\n'
         firewallForm += '  Firewall Back-VRRP Interface:   '+str(SubnetLists[auxIII][0][1])+' (gateway for ???)\n'
         firewallForm += '  Master Firewall Back Interface: '+str(SubnetLists[auxIII][0][2])+'\n'
         firewallForm += '  Backup Firewall Back Interface: '+str(SubnetLists[auxIII][0][3])+'\n\n'
@@ -626,7 +694,7 @@ def main():
         firewallForm += '   (firewalls should be set to the same speed)\n'
         firewallForm += '  INFRA4.0 VLAN (Num/Label):   '+str(Vlans[auxIII])+'/'+mfwloc.room+'r'+str("%02d" % int(mfwloc.row))+'-'+alloccode+'-'+Depths[auxIII]+'\n\n'
         auxIII += 1
-    firewallForm += '**State sync is eth4\n\n'
+    firewallForm += '**State sync is '+syncInt+'\n\n'
     print(firewallForm)
     if ips != 'none':
         input('Hit Enter to view the IPS allocation form')
@@ -644,7 +712,7 @@ def main():
         if Sniff[1] == 'y':
             ipsform += 'IPS inline port 1A\n\n'
             ipsform += '      connection to: '+mfw+'\n'
-            ipsform += '               port: '+nokiaPorts[1]+'\n'
+            ipsform += '               port: '+availPorts[1]+'\n'
             ipsform += '          speed/dup: '+speed+'M/Full\n'
             ipsform += '         cable type: XOVER\n\n'
             ipsform += 'IPS inline port 1B\n\n'
@@ -657,7 +725,7 @@ def main():
                 if sniff == 'y':
                     ipsform += 'IPS inline port 2C\n\n'
                     ipsform += '      connection to: '+mfw+'\n'
-                    ipsform += '               port: '+nokiaPorts[auxIV]+'\n'
+                    ipsform += '               port: '+availPorts[auxIV]+'\n'
                     ipsform += '          speed/dup: '+speed+'M/Full\n'
                     ipsform += '         cable type: XOVER\n\n'
                     ipsform += 'IPS inline port 2D\n\n'
@@ -675,7 +743,7 @@ def main():
                 if sniff == 'y':
                     ipsform += 'IPS inline port '+('1A' if auxV == 0 else '2C')+'\n\n'
                     ipsform += '      connection to: '+mfw+'\n'
-                    ipsform += '               port: '+nokiaPorts[auxVI]+'\n'
+                    ipsform += '               port: '+availPorts[auxVI]+'\n'
                     ipsform += '          speed/dup: '+speed+'M/Full\n'
                     ipsform += '         cable type: XOVER\n\n'
                     ipsform += 'IPS inline port '+('1B' if auxV == 0 else '2D')+'\n\n'
