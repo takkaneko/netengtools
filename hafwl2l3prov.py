@@ -369,7 +369,7 @@ def chooseSyncInt(sid):
     while True:
         try:
             syncinterface = input('Enter a sync interface, or type \'none\' ['+defaultsync(sid)+']: ').lower().strip() or defaultsync(sid)
-            if syncinterface in devicePorts(sid):
+            if syncinterface in devicePorts(sid) or syncinterface == 'none':
                 break
             else:
                 print('ERROR: INVALID DATA\n')
@@ -390,7 +390,8 @@ def main():
     ###### Prompts to select a sync port:
     syncInt = chooseSyncInt(mfw)
     availPorts = devicePorts(mfw)
-    availPorts.remove(syncInt)
+    if syncInt != 'none':
+        availPorts.remove(syncInt)
     
     ###### FRONT SEGMENT
     # 1. VLAN:
@@ -596,10 +597,12 @@ def main():
         (sync,bk,bks) = ('44','43','42')
     print('CUSTOM CABLING INFORMATION:')
     print('---------------------------\n')
-    cabling = 'sysc:\n'
-    x = nw_rs.index(rs)
-    cabling += '  '+mfw+' '+syncInt+' -> YELLOW XOVER -> U'+sync+' YELLOW PANEL p'+str(x+1 if x<=15 else x-31)+'\n'
-    cabling += '  '+sfw+' '+syncInt+' -> YELLOW STRAIGHT -> U'+sync+' YELLOW PANEL p'+str(x+1 if x<=15 else x-31)+'\n\n'
+    cabling = ''
+    if syncInt != 'none':
+        cabling += 'sysc:\n'
+        x = nw_rs.index(rs)
+        cabling += '  '+mfw+' '+syncInt+' -> YELLOW XOVER -> U'+sync+' YELLOW PANEL p'+str(x+1 if x<=15 else x-31)+'\n'
+        cabling += '  '+sfw+' '+syncInt+' -> YELLOW STRAIGHT -> U'+sync+' YELLOW PANEL p'+str(x+1 if x<=15 else x-31)+'\n\n'
     cumulative = 0
     if Sniff[1] == 'y':
         cumulative += 1
