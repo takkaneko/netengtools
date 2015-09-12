@@ -32,6 +32,7 @@ def getHAdevices(devicetype):
     """
     devicetype must be either 'firewall' or 'loadbalancer.'
     Prompts to enter SIDs/speed/locations of HA pair & IPS (w/ their error handlings).
+    Only accepts the devicetype you specify.
     Returns the provided data as a list for use in main().
     
     mfw = master device ID (firewall or loadbalancer)
@@ -623,104 +624,108 @@ def main():
     print(cabling)
     input('Hit Enter to view the firewall allocation form')
     print()
-    # firewall allocation form (without IP info)
-    firewallForm = 'FIREWALL NETWORK INFORMATION:\n'
-    firewallForm += '------------------------------\n\n'
-    firewallForm += 'Allocation Code: '+alloccode+'\n\n'
-    firewallForm += 'Master Firewall ID:            '+mfw+'\n'
-    firewallForm += 'Backup Firewall ID:            '+sfw+'\n'
-    firewallForm += 'Master Rack/Console Loc.Code:  '+mfwloc+'\n'
-    firewallForm += 'Backup Rack/Console Loc.Code:  '+sfwloc+'\n'
-    firewallForm += 'Firewall Network Unit: Infra 4.0, equipment racks: '+mfwloc.row+'-'+mfwloc.rack_noa+', '+sfwloc.row+'-'+sfwloc.rack_noa+'\n\n'
-    firewallForm += 'Firewalls Front (Network '+frontdepth+')\n\n'
-    firewallForm += '  Physical Interface: '+availPorts[0]+'\n\n'
-    if mfw.findVendor() == 'cisco':
-        firewallForm += '  Master Firewall Front Interface: '+str(frontnet[0][4])+'\n'
+    # HA device pair allocation form
+    if mfw.is_fw():
+        devicetype = 'firewall'
     else:
-        firewallForm += '  Firewall Front-VRRP Interface:   '+str(frontnet[0][4])+'\n'
-        firewallForm += '  Master Firewall Front Interface: '+str(frontnet[0][5])+'\n'
-    firewallForm += '  Backup Firewall Front Interface: '+str(frontnet[0][6])+'\n\n'
-    firewallForm += '  Default Gateway:  '+str(frontnet[0][1])+'\n'
-    firewallForm += '  Front Network:    '+str(frontnet[0])+'\n'
-    firewallForm += '  Front Netmask:    '+str(frontnet[0].netmask)+'\n\n'
-    firewallForm += '  Master Firewall Connection To (Row Agg Sw. ID): '+mfwloc.findsw()+'\n'
-    firewallForm += '  Master Firewall Connection Port:                '+mfwloc.findfrport()+'\n\n'
-    firewallForm += '  Backup Firewall Connection To (Row Agg Sw. ID): '+sfwloc.findsw()+'\n'
-    firewallForm += '  Backup Firewall Connection Port:                '+sfwloc.findfrport()+'\n\n'
-    firewallForm += '  SwitchPort Speed/Duplex set to:                 '+speed+'M/Full\n'
-    firewallForm += '   (firewalls should be set to the same speed)\n'
-    firewallForm += '  INFRA4.0 VLAN (Num/Label):   '+str(frontVlan)+'/'+mfwloc.room+'r'+str("%02d" % int(mfwloc.row))+'-'+alloccode+'-'+frontdepth+'\n\n'
-    firewallForm += 'Firewalls Backs:\n\n'
-    firewallForm += '**'+backName+' (Network '+backdepth+')\n\n'
-    firewallForm += '  Physical Interface: '+availPorts[1]+'\n\n'
+        devicetype = 'loadbalancer'
+    HAdeviceForm = devicetype.upper()+' NETWORK INFORMATION:\n'
+    HAdeviceForm += '------------------------------\n\n'
+    HAdeviceForm += 'Allocation Code: '+alloccode+'\n\n'
+    HAdeviceForm += 'Master '+devicetype.title()+' ID:            '+mfw+'\n'
+    HAdeviceForm += 'Backup '+devicetype.title()+' ID:            '+sfw+'\n'
+    HAdeviceForm += 'Master Rack/Console Loc.Code:  '+mfwloc+'\n'
+    HAdeviceForm += 'Backup Rack/Console Loc.Code:  '+sfwloc+'\n'
+    HAdeviceForm += devicetype.title()+' Network Unit: Infra 4.0, equipment racks: '+mfwloc.row+'-'+mfwloc.rack_noa+', '+sfwloc.row+'-'+sfwloc.rack_noa+'\n\n'
+    HAdeviceForm += devicetype.title()+'s Front (Network '+frontdepth+')\n\n'
+    HAdeviceForm += '  Physical Interface: '+availPorts[0]+'\n\n'
     if mfw.findVendor() == 'cisco':
-        firewallForm += '  Master Firewall Back Interface: '+str(backnets[0][1])+' (gateway for ???)\n'
+        HAdeviceForm += '  Master '+devicetype.title()+' Front Interface: '+str(frontnet[0][4])+'\n'
     else:
-        firewallForm += '  Firewall Back-VRRP Interface:   '+str(backnets[0][1])+' (gateway for ???)\n'
-        firewallForm += '  Master Firewall Back Interface: '+str(backnets[0][2])+'\n'
-    firewallForm += '  Backup Firewall Back Interface: '+str(backnets[0][3])+'\n\n'
-    firewallForm += '  Back Network:      '+str(backnets[0])+'\n'
-    firewallForm += '  Back Netmask:      '+str(backnets[0].netmask)+'\n\n'
+        HAdeviceForm += '  '+devicetype.title()+' Front-VRRP Interface:   '+str(frontnet[0][4])+'\n'
+        HAdeviceForm += '  Master '+devicetype.title()+' Front Interface: '+str(frontnet[0][5])+'\n'
+    HAdeviceForm += '  Backup '+devicetype.title()+' Front Interface: '+str(frontnet[0][6])+'\n\n'
+    HAdeviceForm += '  Default Gateway:  '+str(frontnet[0][1])+'\n'
+    HAdeviceForm += '  Front Network:    '+str(frontnet[0])+'\n'
+    HAdeviceForm += '  Front Netmask:    '+str(frontnet[0].netmask)+'\n\n'
+    HAdeviceForm += '  Master '+devicetype.title()+' Connection To (Row Agg Sw. ID): '+mfwloc.findsw()+'\n'
+    HAdeviceForm += '  Master '+devicetype.title()+' Connection Port:                '+mfwloc.findfrport()+'\n\n'
+    HAdeviceForm += '  Backup '+devicetype.title()+' Connection To (Row Agg Sw. ID): '+sfwloc.findsw()+'\n'
+    HAdeviceForm += '  Backup '+devicetype.title()+' Connection Port:                '+sfwloc.findfrport()+'\n\n'
+    HAdeviceForm += '  SwitchPort Speed/Duplex set to:                 '+speed+'M/Full\n'
+    HAdeviceForm += '   ('+devicetype.title()+'s should be set to the same speed)\n'
+    HAdeviceForm += '  INFRA4.0 VLAN (Num/Label):   '+str(frontVlan)+'/'+mfwloc.room+'r'+str("%02d" % int(mfwloc.row))+'-'+alloccode+'-'+frontdepth+'\n\n'
+    HAdeviceForm += devicetype.title()+'s Backs:\n\n'
+    HAdeviceForm += '**'+backName+' (Network '+backdepth+')\n\n'
+    HAdeviceForm += '  Physical Interface: '+availPorts[1]+'\n\n'
+    if mfw.findVendor() == 'cisco':
+        HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(backnets[0][1])+' (gateway for ???)\n'
+    else:
+        HAdeviceForm += '  '+devicetype.title()+' Back-VRRP Interface:   '+str(backnets[0][1])+' (gateway for ???)\n'
+        HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(backnets[0][2])+'\n'
+    HAdeviceForm += '  Backup '+devicetype.title()+' Back Interface: '+str(backnets[0][3])+'\n\n'
+    HAdeviceForm += '  Back Network:      '+str(backnets[0])+'\n'
+    HAdeviceForm += '  Back Netmask:      '+str(backnets[0].netmask)+'\n\n'
     ####################### ADD LOOP FOR ADDITIONAL ALIASES #######################
     if len(backnets) > 1:
         for backnet in backnets[1:]:
-            firewallForm += ' *Add\'tl Alias for '+backName+':\n\n'
+            HAdeviceForm += ' *Add\'tl Alias for '+backName+':\n\n'
             if mfw.findVendor() == 'cisco':
-                firewallForm += '  Master Firewall Back Interface: '+str(backnet[1])+' (gateway for ???)\n'
+                HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(backnet[1])+' (gateway for ???)\n'
             else:
-                firewallForm += '  Firewall Back-VRRP Interface:   '+str(backnet[1])+' (gateway for ???)\n'
-                firewallForm += '  Master Firewall Back Interface: '+str(backnet[2])+'\n'
-            firewallForm += '  Master Firewall Back Interface: '+str(backnet[2])+'\n'
-            firewallForm += '  Backup Firewall Back Interface: '+str(backnet[3])+'\n\n'
-            firewallForm += '  Back Network:      '+str(backnet)+'\n'
-            firewallForm += '  Back Netmask:      '+str(backnet.netmask)+'\n\n'
+                HAdeviceForm += '  '+devicetype.title()+' Back-VRRP Interface:   '+str(backnet[1])+' (gateway for ???)\n'
+                HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(backnet[2])+'\n'
+            HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(backnet[2])+'\n'
+            HAdeviceForm += '  Backup '+devicetype.title()+' Back Interface: '+str(backnet[3])+'\n\n'
+            HAdeviceForm += '  Back Network:      '+str(backnet)+'\n'
+            HAdeviceForm += '  Back Netmask:      '+str(backnet.netmask)+'\n\n'
     ###############################################################################
-    firewallForm += '  Master Firewall Connection To (Row Agg Sw. ID): '+mfwloc.findsw()+'\n'
-    firewallForm += '  Master Firewall Connection Port:                '+mfwloc.findbkport()+'\n\n'
-    firewallForm += '  Backup Firewall Connection To (Row Agg Sw. ID): '+sfwloc.findsw()+'\n'
-    firewallForm += '  Backup Firewall Connection Port:                '+sfwloc.findbkport()+'\n\n'
-    firewallForm += '  SwitchPort Speed/Duplex set to:                 '+speed+'M/Full\n'
-    firewallForm += '   (firewalls should be set to the same speed)\n'
-    firewallForm += '  INFRA4.0 VLAN (Num/Label):   '+str(backVlan)+'/'+mfwloc.room+'r'+str("%02d" % int(mfwloc.row))+'-'+alloccode+'-'+backdepth+'\n\n'
+    HAdeviceForm += '  Master '+devicetype.title()+' Connection To (Row Agg Sw. ID): '+mfwloc.findsw()+'\n'
+    HAdeviceForm += '  Master '+devicetype.title()+' Connection Port:                '+mfwloc.findbkport()+'\n\n'
+    HAdeviceForm += '  Backup '+devicetype.title()+' Connection To (Row Agg Sw. ID): '+sfwloc.findsw()+'\n'
+    HAdeviceForm += '  Backup '+devicetype.title()+' Connection Port:                '+sfwloc.findbkport()+'\n\n'
+    HAdeviceForm += '  SwitchPort Speed/Duplex set to:                 '+speed+'M/Full\n'
+    HAdeviceForm += '   ('+devicetype.title()+'s should be set to the same speed)\n'
+    HAdeviceForm += '  INFRA4.0 VLAN (Num/Label):   '+str(backVlan)+'/'+mfwloc.room+'r'+str("%02d" % int(mfwloc.row))+'-'+alloccode+'-'+backdepth+'\n\n'
     auxIII = 2
     for segment in Segments[2:]:
-        firewallForm += '**'+segment+' (Network '+Depths[auxIII]+')\n\n'
-        firewallForm += '  Physical Interface: '+availPorts[auxIII]+'\n\n'
+        HAdeviceForm += '**'+segment+' (Network '+Depths[auxIII]+')\n\n'
+        HAdeviceForm += '  Physical Interface: '+availPorts[auxIII]+'\n\n'
         if mfw.findVendor() == 'cisco':
-            firewallForm += '  Master Firewall Back Interface: '+str(SubnetLists[auxIII][0][1])+' (gateway for ???)\n'
+            HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(SubnetLists[auxIII][0][1])+' (gateway for ???)\n'
         else:
-            firewallForm += '  Firewall Back-VRRP Interface:   '+str(SubnetLists[auxIII][0][1])+' (gateway for ???)\n'
-            firewallForm += '  Master Firewall Back Interface: '+str(SubnetLists[auxIII][0][2])+'\n'
-        firewallForm += '  Backup Firewall Back Interface: '+str(SubnetLists[auxIII][0][3])+'\n\n'
-        firewallForm += '  Back Network:      '+str(SubnetLists[auxIII][0])+'\n'
-        firewallForm += '  Back Netmask:      '+str(SubnetLists[auxIII][0].netmask)+'\n\n'
+            HAdeviceForm += '  '+devicetype.title()+' Back-VRRP Interface:   '+str(SubnetLists[auxIII][0][1])+' (gateway for ???)\n'
+            HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(SubnetLists[auxIII][0][2])+'\n'
+        HAdeviceForm += '  Backup '+devicetype.title()+' Back Interface: '+str(SubnetLists[auxIII][0][3])+'\n\n'
+        HAdeviceForm += '  Back Network:      '+str(SubnetLists[auxIII][0])+'\n'
+        HAdeviceForm += '  Back Netmask:      '+str(SubnetLists[auxIII][0].netmask)+'\n\n'
         ####################### ADD LOOP FOR ADDITIONAL ALIASES #######################
         if len(SubnetLists[auxIII]) > 1:
             for aliasnet in SubnetLists[auxIII][1:]:
-                firewallForm += ' *Add\'tl Alias for '+Segments[auxIII]+':\n\n'
+                HAdeviceForm += ' *Add\'tl Alias for '+Segments[auxIII]+':\n\n'
                 if mfw.findVendor() == 'cisco':
-                    firewallForm += '  Master Firewall Back Interface: '+str(aliasnet[1])+' (gateway for ???)\n'
+                    HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(aliasnet[1])+' (gateway for ???)\n'
                 else:
-                    firewallForm += '  Firewall Back-VRRP Interface:   '+str(aliasnet[1])+' (gateway for ???)\n'
-                    firewallForm += '  Master Firewall Back Interface: '+str(aliasnet[2])+'\n'
-                firewallForm += '  Backup Firewall Back Interface: '+str(aliasnet[3])+'\n\n'
-                firewallForm += '  Back Network:      '+str(aliasnet)+'\n'
-                firewallForm += '  Back Netmask:      '+str(aliasnet.netmask)+'\n\n'
+                    HAdeviceForm += '  '+devicetype.title()+' Back-VRRP Interface:   '+str(aliasnet[1])+' (gateway for ???)\n'
+                    HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(aliasnet[2])+'\n'
+                HAdeviceForm += '  Backup '+devicetype.title()+' Back Interface: '+str(aliasnet[3])+'\n\n'
+                HAdeviceForm += '  Back Network:      '+str(aliasnet)+'\n'
+                HAdeviceForm += '  Back Netmask:      '+str(aliasnet.netmask)+'\n\n'
         ###############################################################################
-        firewallForm += '  Master Firewall Connection To (Row Agg Sw. ID): '+mfwloc.findsw()+'\n'
-        firewallForm += '  Master Firewall Connection Port:                gi'+mfwloc.findmod()+'/'+str(Ports[auxIII])+'\n\n'
-        firewallForm += '  Backup Firewall Connection To (Row Agg Sw. ID): '+sfwloc.findsw()+'\n'
-        firewallForm += '  Backup Firewall Connection Port:                gi'+sfwloc.findmod()+'/'+str(Ports[auxIII])+'\n\n'
-        firewallForm += '  SwitchPorts Speed/Duplex set to:                '+speed+'M/Full\n'
-        firewallForm += '   (firewalls should be set to the same speed)\n'
-        firewallForm += '  INFRA4.0 VLAN (Num/Label):   '+str(Vlans[auxIII])+'/'+mfwloc.room+'r'+str("%02d" % int(mfwloc.row))+'-'+alloccode+'-'+Depths[auxIII]+'\n\n'
+        HAdeviceForm += '  Master '+devicetype.title()+' Connection To (Row Agg Sw. ID): '+mfwloc.findsw()+'\n'
+        HAdeviceForm += '  Master '+devicetype.title()+' Connection Port:                gi'+mfwloc.findmod()+'/'+str(Ports[auxIII])+'\n\n'
+        HAdeviceForm += '  Backup '+devicetype.title()+' Connection To (Row Agg Sw. ID): '+sfwloc.findsw()+'\n'
+        HAdeviceForm += '  Backup '+devicetype.title()+' Connection Port:                gi'+sfwloc.findmod()+'/'+str(Ports[auxIII])+'\n\n'
+        HAdeviceForm += '  SwitchPorts Speed/Duplex set to:                '+speed+'M/Full\n'
+        HAdeviceForm += '   ('+devicetype.title()+'s should be set to the same speed)\n'
+        HAdeviceForm += '  INFRA4.0 VLAN (Num/Label):   '+str(Vlans[auxIII])+'/'+mfwloc.room+'r'+str("%02d" % int(mfwloc.row))+'-'+alloccode+'-'+Depths[auxIII]+'\n\n'
         auxIII += 1
-    firewallForm += '**State sync is '+syncInt+'\n\n'
-    print(firewallForm)
+    HAdeviceForm += '**State sync is '+syncInt+'\n\n'
+    print(HAdeviceForm)
     if ips != 'none':
         input('Hit Enter to view the IPS allocation form')
         print()
-        # [IF APPLICABLE] IPS allocation form (without IP info)
+        # [IF APPLICABLE] IPS allocation form
         ipsform = 'IPS NETWORK INFORMATION:\n'
         ipsform += '--------------------------\n\n'
         ipsform += 'IPS ID: '+ips+'\n'
