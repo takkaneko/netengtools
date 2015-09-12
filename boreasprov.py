@@ -2,6 +2,7 @@
 # boreasprov.py
 
 import hafwl2l3prov
+import halbl2l3prov
 
 def main():
     title ='\n*********************************\n'
@@ -33,7 +34,7 @@ def main():
         fwprov.main()
     if choice == 3:
         print('Starting HA Alteon4408 provisioning...\n')
-        halbprov.main()
+        halbl2l3prov.main()
     if choice == 4:
         print('Starting stand-alone Alteon4408 provisioning...\n')
         lbprov.main()

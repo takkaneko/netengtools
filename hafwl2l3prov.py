@@ -52,8 +52,7 @@ def getHAdevices(devicetype):
                 print("ERROR: SERVICE ID INVALID\n")
         except AttributeError:
             print('ERROR: SERVICE ID INVALID\n')
-    while True:
-
+    while devicetype == 'firewall':
         try:
             speed = input('Enter the interface speed (Mbps)[1000]: ').strip() or '1000'
             if not re.match(r"^10{2,3}$",speed):
@@ -63,7 +62,7 @@ def getHAdevices(devicetype):
                 break
         except ValueError:
             print('ERROR: DATA INVALID')
-
+    speed = speed if devicetype == 'firewall' else '1000'
     while True:
         try:
             mfwloc = Loccode(input("Enter the location code of "+mfw+": "))
