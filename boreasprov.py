@@ -2,6 +2,7 @@
 # boreasprov.py
 
 import hafwl2l3prov
+import fwl2l3prov
 import halbl2l3prov
 
 def main():
@@ -31,7 +32,7 @@ def main():
         hafwl2l3prov.main()
     if choice == 2:
         print('Starting stand-alone firewall provisioning...\n')
-        fwprov.main()
+        fwl2l3prov.main()
     if choice == 3:
         print('Starting HA Alteon4408 provisioning...\n')
         halbl2l3prov.main()
