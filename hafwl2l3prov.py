@@ -104,9 +104,9 @@ def getHAdevices(devicetype):
                     print("OK")
                     break
                 elif mfwloc == ipsloc:
-                    print("ERROR: Master firewall and IPS cannot take the same slot!\n")
+                    print("ERROR: Master "+devicetype+" and IPS cannot take the same slot!\n")
                 elif not (mfwloc.srr == ipsloc.srr and mfwloc.rack_noa == ipsloc.rack_noa):
-                    print("ERROR: Master firewall and IPS must be in the same rack\n")
+                    print("ERROR: Master "+devicetype+" and IPS must be in the same rack\n")
                 else:
                     print("ERROR: INVALID LOCATION\n")
             except AttributeError:
@@ -516,6 +516,7 @@ def main():
         swconf = 'telnet '+loc.findsw()+'\n'
         swconf += username+'\n'
         swconf += password+'\n'
+        swconf += 'conf t\n'
         swconf += 'int '+loc.findfrport()+'\n'
         swconf += ' description '+loc.rrs.replace('.','-')+'-'+role+'fr '+alloccode+'-'+Depths[0]+' '+sid+' front\n'
         swconf += ' switchport\n'

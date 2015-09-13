@@ -165,6 +165,7 @@ def main():
         swconf = 'telnet '+loc.findsw()+'\n'
         swconf += username+'\n'
         swconf += password+'\n'
+        swconf += 'conf t\n'
         swconf += 'int '+loc.findfrport()+'\n'
         swconf += ' description '+loc.rrs.replace('.','-')+'-'+role+'fr '+alloccode+'-'+Depths[0]+' '+sid+' front\n'
         swconf += ' switchport\n'
