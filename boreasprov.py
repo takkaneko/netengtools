@@ -11,11 +11,11 @@ def main():
     title += '*********************************\n\n'
     title += 'Please select your provisioning task from the following menus:\n'
     print(title)
-    options =  '1. HA firewall (CP IP390/560 series or ASA5500 series)\n'
-    options += '2. Stand-alone firewall (UTM series or ASA5500 series)\n'
+    options =  '1. HA firewall (CheckPoint or ASA5500 series)\n'
+    options += '2. Stand-alone firewall (CheckPoint or ASA5500 series)\n'
     options += '3. HA Alteon4408\n'
     options += '4. Stand-alone Alteon4408\n'
-    options += '5. IPS only (when monitoring multiple devices)\n'
+    options += '5. IPS only (To monitor multiple devices or an HA *standby*)\n'
     print(options)
     while True:
         try:
@@ -38,7 +38,7 @@ def main():
         halbl2l3prov.main()
     if choice == 4:
         print('Starting stand-alone Alteon4408 provisioning...\n')
-        lbprov.main()
+        lbl2l3prov.main()
     if choice == 5:
         print('Starting IPS provisioning...\n')
         ipsprov.main()
