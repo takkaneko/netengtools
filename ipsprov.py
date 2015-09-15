@@ -199,7 +199,7 @@ def showCabling(ips,nwdevice,nwdeviceloc,segmentName,deviceitf,pnum,monnum):
     
 
 
-    cabling = '\n'+segmentName+':\n'
+    cabling = segmentName+':\n'
     cabling += '  '+nwdevice+' '+deviceitf+' -> GREEN XOVER -> '+ips+'port '+to_nwdevice+'\n'
     cabling += '  '+ips+' port '+to_switch+' -> GREEN STRAIGHT -> U'+bk+' '+updown+' ORANGE PANEL p'+pnum+'\n'
     print(cabling)
@@ -254,10 +254,56 @@ def main():
         else:
             break
 
+    #############################################################################
+    print('\nThe rest will generate port configs, custom cabling info, allocation form, etc.\n')
+    
+    # back up port configs
+    print('******************************************************')
+    print('Use the following to collect switchport backup configs')
+    print('******************************************************\n')
+
+    backup = 'telnet '+ipsloc.findsw()+'\n'
+    backup += username+'\n'
+    backup += password+'\n'
+    backup += 'sh run int '+ipsloc.findfrport()+'\n'
+    backup += 'sh run int '+ipsloc.findbkport()+'\n'
+    backup += 'exit\n'
+    print(backup)
+
+    input('Hit Enter to view the new switchport configs.')
+    print()
+    # new port configs
+    print('*************************************************')
+    print('Use the following to apply new switchport configs')
+    print('*************************************************\n')
+    print()
+    swconf = 'telnet '+ipsloc.findsw()+'\n'
+    swconf += username+'\n'
+    swconf += password+'\n'
+    swconf += 'conf t\n'
+    swconf += 'int '+ipsloc.findfrport()+'\n'
+    swconf += ' description RESERVED: '+ipsloc.rrs.replace('.','-')+'-fr '+alloccode+' '+ips+'\n'
+    swconf += ' switchport\n'
+    swconf += ' switchport access vlan 133\n'
+    swconf += ' switchport mode access\n'
+    swconf += ' spanning-tree portfast edge\n'
+    swconf += ' shut\n'
+    swconf += '!\n'
+    swconf += 'int '+ipsloc.findbkport()+'\n'
+    swconf += ' description '+ipsloc.rrs.replace('.','-')+'-bk '+alloccode+'-'+ipsmgtDepth+' '+ips+' mgmt\n'
+    swconf += ' switchport\n'
+    swconf += ' switchport access vlan '+str(ipsmgtVlan)+'\n'
+    swconf += ' switchport mode access\n'
+    swconf += ' spanning-tree portfast edge\n'
+    swconf += ' no shut\n!\n'
+    swconf += ' end\n'
+    print(swconf)
+
     ##### Generate custom cabling information:
     print()
     print('CUSTOM CABLING INFORMATION:')
     print('---------------------------')
+    print()
     showCabling(ips,nwdevice1,nwdevice1loc,segmentName1,deviceitf1,pnum1,1)
     showCabling(ips,nwdevice2,nwdevice2loc,segmentName2,deviceitf2,pnum2,2)
     print('(NOTE: For additional custom cabling of '+nwdevice1+(' and '+nwdevice2 if nwdevice2 != nwdevice1 else '')+',')
@@ -281,7 +327,7 @@ def main():
     ipsform += '         cable type: XOVER\n\n'
     ipsform += 'IPS inline port 1B\n\n'
     ipsform += '      connection to: '+nwdevice1loc.findsw()+'\n'
-    ipsform += '               port: '+swport1+'\n'
+    ipsform += '               port: '+swport1+(' ('+nwdevice1loc+' green)' if devicePorts(nwdevice1).index(deviceitf1) == 1 else '')+'\n'
     ipsform += '          speed/dup: '+speed1+'M/Full\n'
     ipsform += '         cable type: straight-thru \n\n'
     ipsform += 'IPS inline port 2C\n\n'
