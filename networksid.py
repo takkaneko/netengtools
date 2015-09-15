@@ -125,6 +125,13 @@ class NWdevice(str):
         """
         return True if re.search('has',self.role) else False
 
+    def is_solo(self):
+        """
+        Boolean that determines if the service id represents a stand-alone device or not.
+        """
+        return True if re.search('stand-alone',self.role) else False
+        
+    
     def is_fw(self):
         """
         Boolean that determines if the service id represents a firewall or not.

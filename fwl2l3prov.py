@@ -37,9 +37,8 @@ def getDevices(devicetype):
     """
     while True:
         try:
-            nwdevice = input("Enter the "+devicetype+" ID: ").lower().strip()
-            if NWdevice(nwdevice).is_fw_or_lb(devicetype):
-                nwdevice = NWdevice(nwdevice)
+            nwdevice = NWdevice(input("Enter the "+devicetype+" ID: ").lower().strip())
+            if nwdevice.is_fw_or_lb(devicetype) and nwdevice.is_solo():
                 break
             else:
                 print("ERROR: SERVICE ID INVALID\n")
