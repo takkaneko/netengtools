@@ -209,12 +209,15 @@ def remdup(List):
             List2.append(i)
     return List2
 
-def getSubnets(segment):
+def getSubnets(segment,nwdevice):
     while True:
         try:
-            nets = input('Enter a subnet or subnets separated by commas for '+segment+': ')
+            nets = input('Enter a subnet '+('or subnets separated by commas ' if nwdevice.findVendor() != 'cisco' else '' )+'for '+segment+': ')
             subnets = re.findall(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2})",nets)
             subnets = remdup(subnets) # Removes duplicate entries
+            if nwdevice.findVendor() == 'cisco' and len(subnets)>1:
+                subnets = [subnets[0]]
+                print('WARNING: Cisco gears accepts a single subnet. Only the first subnet was accepted.\n')
             if subnets != []:
                 for i,_ in enumerate(subnets):
                     subnets[i] = ip_network(subnets[i])
@@ -405,7 +408,9 @@ def main():
     Depths.append(frontdepth)
 
     # 3. SUBNETS:
-    frontnet = getSubnets('the firewall front')
+    frontnet = getSubnets('the firewall front',mfw)
+    if len(frontnet)>1:
+        print('WARNING: The firewall front accepts a single subnet. Only the first subnet was accepted.\n')
 
     print('OK\nNow let\'s define firewall back segments, one by one.\n')
 
@@ -426,7 +431,7 @@ def main():
     Depths.append(backdepth)
 
     # 4. SUBNETS:
-    backnets = getSubnets(backName)
+    backnets = getSubnets(backName,mfw)
 
     # 5. IPS QUESTION:
     monitored = 0
@@ -459,7 +464,7 @@ def main():
         Depths.append(auxdepth)
 
         ###### CHOOSE SUBNETS ######
-        SubnetLists.append(getSubnets(auxsegment))
+        SubnetLists.append(getSubnets(auxsegment,mfw))
 
         ###### IPS OPTION ######
         [monitored,Sniff] = askifMonitor(ips,monitored,Sniff)
@@ -637,7 +642,7 @@ def main():
     HAdeviceForm += 'Master Rack/Console Loc.Code:  '+mfwloc+'\n'
     HAdeviceForm += 'Backup Rack/Console Loc.Code:  '+sfwloc+'\n'
     HAdeviceForm += devicetype.title()+' Network Unit: Infra 4.0, equipment racks: '+mfwloc.row+'-'+mfwloc.rack_noa+', '+sfwloc.row+'-'+sfwloc.rack_noa+'\n\n'
-    HAdeviceForm += devicetype.title()+'s Front (Network '+frontdepth+')\n\n'
+    HAdeviceForm += devicetype.title()+'s Front (Network '+frontdepth+'):\n\n'
     HAdeviceForm += '  Physical Interface: '+availPorts[0]+'\n\n'
     if mfw.findVendor() == 'cisco':
         HAdeviceForm += '  Master '+devicetype.title()+' Front Interface: '+str(frontnet[0][4])+'\n'
@@ -656,7 +661,7 @@ def main():
     HAdeviceForm += '   ('+devicetype.title()+'s should be set to the same speed)\n'
     HAdeviceForm += '  INFRA4.0 VLAN (Num/Label):   '+str(frontVlan)+'/'+mfwloc.room+'r'+str("%02d" % int(mfwloc.row))+'-'+alloccode+'-'+frontdepth+'\n\n'
     HAdeviceForm += devicetype.title()+'s Backs:\n\n'
-    HAdeviceForm += '**'+backName+' (Network '+backdepth+')\n\n'
+    HAdeviceForm += '**'+backName+' (Network '+backdepth+'):\n\n'
     HAdeviceForm += '  Physical Interface: '+availPorts[1]+'\n\n'
     if mfw.findVendor() == 'cisco':
         HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(backnets[0][1])+' (gateway for ???)\n'
@@ -675,7 +680,6 @@ def main():
             else:
                 HAdeviceForm += '  '+devicetype.title()+' Back-VRRP Interface:   '+str(backnet[1])+' (gateway for ???)\n'
                 HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(backnet[2])+'\n'
-            HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(backnet[2])+'\n'
             HAdeviceForm += '  Backup '+devicetype.title()+' Back Interface: '+str(backnet[3])+'\n\n'
             HAdeviceForm += '  Back Network:      '+str(backnet)+'\n'
             HAdeviceForm += '  Back Netmask:      '+str(backnet.netmask)+'\n\n'
@@ -689,7 +693,7 @@ def main():
     HAdeviceForm += '  INFRA4.0 VLAN (Num/Label):   '+str(backVlan)+'/'+mfwloc.room+'r'+str("%02d" % int(mfwloc.row))+'-'+alloccode+'-'+backdepth+'\n\n'
     auxIII = 2
     for segment in Segments[2:]:
-        HAdeviceForm += '**'+segment+' (Network '+Depths[auxIII]+')\n\n'
+        HAdeviceForm += '**'+segment+' (Network '+Depths[auxIII]+'):\n\n'
         HAdeviceForm += '  Physical Interface: '+availPorts[auxIII]+'\n\n'
         if mfw.findVendor() == 'cisco':
             HAdeviceForm += '  Master '+devicetype.title()+' Back Interface: '+str(SubnetLists[auxIII][0][1])+' (gateway for ???)\n'

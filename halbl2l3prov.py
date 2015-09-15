@@ -54,7 +54,9 @@ def main():
     Depths.append(frontdepth)
 
     # 3. SUBNETS:
-    frontnet = getSubnets('the loadbalancer front')
+    frontnet = getSubnets('the loadbalancer front',mfw)
+    if len(frontnet)>1:
+        print('WARNING: The loadbalancer front accepts a single subnet. Only the first subnet was accepted.\n')
 
     print('OK\nNow let\'s define loadbalancer back segments, one by one.\n')
 
@@ -75,7 +77,7 @@ def main():
     Depths.append(backdepth)
 
     # 4. SUBNETS:
-    backnets = getSubnets(backName)
+    backnets = getSubnets(backName,mfw)
 
     # 5. IPS QUESTION:
     monitored = 0
@@ -108,7 +110,7 @@ def main():
         Depths.append(auxdepth)
 
         ###### CHOOSE SUBNETS ######
-        SubnetLists.append(getSubnets(auxsegment))
+        SubnetLists.append(getSubnets(auxsegment,mfw))
 
         ###### IPS OPTION ######
         [monitored,Sniff] = askifMonitor(ips,monitored,Sniff)
