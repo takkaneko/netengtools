@@ -337,7 +337,7 @@ def main():
     ipsform += '         cable type: XOVER\n\n'
     ipsform += 'IPS inline port 2D\n\n'
     ipsform += '      connection to: '+nwdevice2loc.findsw()+'\n'
-    ipsform += '               port: '+swport2+'\n'
+    ipsform += '               port: '+swport2+(' ('+nwdevice2loc+' green)' if devicePorts(nwdevice2).index(deviceitf2) == 1 else '')+'\n'
     ipsform += '          speed/dup: '+speed2+'M/Full\n'
     ipsform += '         cable type: straight-thru\n\n'
     ipsform += 'IPS Management\n\n'
