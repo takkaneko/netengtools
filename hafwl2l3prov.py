@@ -217,7 +217,7 @@ def getSubnets(segment,nwdevice):
             subnets = remdup(subnets) # Removes duplicate entries
             if nwdevice.findVendor() == 'cisco' and len(subnets)>1:
                 subnets = [subnets[0]]
-                print('WARNING: Cisco gears accepts a single subnet. Only the first subnet was accepted.\n')
+                print('WARNING: Cisco gear accepts a single subnet. Only the first subnet was accepted.\n')
             if subnets != []:
                 for i,_ in enumerate(subnets):
                     subnets[i] = ip_network(subnets[i])
@@ -605,7 +605,7 @@ def main():
     print('---------------------------\n')
     cabling = ''
     if syncInt != 'none':
-        cabling += 'sysc:\n'
+        cabling += 'sync:\n'
         x = nw_rs.index(rs)
         cabling += '  '+mfw+' '+syncInt+' -> YELLOW XOVER -> U'+sync+' YELLOW PANEL p'+str(x+1 if x<=15 else x-31)+'\n'
         cabling += '  '+sfw+' '+syncInt+' -> YELLOW STRAIGHT -> U'+sync+' YELLOW PANEL p'+str(x+1 if x<=15 else x-31)+'\n\n'

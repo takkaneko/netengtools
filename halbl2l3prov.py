@@ -251,7 +251,7 @@ def main():
     print('---------------------------\n')
     cabling = ''
     if syncInt != 'none':
-        cabling += 'sysc:\n'
+        cabling += 'sync:\n'
         x = nw_rs.index(rs)
         cabling += '  '+mfw+' '+syncInt+' -> YELLOW XOVER -> U'+sync+' YELLOW PANEL p'+str(x+1 if x<=15 else x-31)+'\n'
         cabling += '  '+sfw+' '+syncInt+' -> YELLOW STRAIGHT -> U'+sync+' YELLOW PANEL p'+str(x+1 if x<=15 else x-31)+'\n\n'
