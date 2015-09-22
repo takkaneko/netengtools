@@ -8,9 +8,9 @@ import lbl2l3prov
 import ipsprov
 
 def main():
-    title ='\n*********************************\n'
-    title += 'BOREAS NETWORK PROVISIONING SUITE\n'
-    title += '*********************************\n\n'
+    title ='\n****************************************\n'
+    title += 'BOREAS NETWORK DEVICE PROVISIONING SUITE\n'
+    title += '****************************************\n\n'
     title += 'Please select your provisioning task from the following menus:\n'
     print(title)
     options =  '1. HA firewall (CheckPoint or ASA5500 series)\n'
