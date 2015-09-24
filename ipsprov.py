@@ -294,6 +294,8 @@ def main():
     swconf += ' switchport\n'
     swconf += ' switchport access vlan '+str(ipsmgtVlan)+'\n'
     swconf += ' switchport mode access\n'
+    swconf += ' speed 100\n'
+    swconf += ' duplex full\n'
     swconf += ' spanning-tree portfast edge\n'
     swconf += ' no shut\n!\n'
     swconf += ' end\n'
