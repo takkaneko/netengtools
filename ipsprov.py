@@ -200,7 +200,7 @@ def showCabling(ips,nwdevice,nwdeviceloc,segmentName,deviceitf,pnum,monnum):
 
 
     cabling = segmentName+':\n'
-    cabling += '  '+nwdevice+' '+deviceitf+' -> GREEN XOVER -> '+ips+'port '+to_nwdevice+'\n'
+    cabling += '  '+nwdevice+' '+deviceitf+' -> GREEN XOVER -> '+ips+' port '+to_nwdevice+'\n'
     cabling += '  '+ips+' port '+to_switch+' -> GREEN STRAIGHT -> U'+bk+' '+updown+' ORANGE PANEL p'+pnum+'\n'
     print(cabling)
 

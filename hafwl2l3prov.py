@@ -615,7 +615,7 @@ def main():
     if Sniff[1] == 'y':
         cumulative += 1
         cabling += backName+':\n'
-        cabling += '  '+mfw+' '+availPorts[1]+' -> GREEN XOVER -> '+ips+'port 1A\n'
+        cabling += '  '+mfw+' '+availPorts[1]+' -> GREEN XOVER -> '+ips+' port 1A\n'
         cabling += '  '+ips+' port 1B -> GREEN STRAIGHT -> U'+bk+' UPPER ORANGE PANEL p'+str(nw_rs.index(rs)%16+17)+'\n\n'
     auxII = 2
     for segment in Segments[2:]:
