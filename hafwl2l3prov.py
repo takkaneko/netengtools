@@ -177,7 +177,7 @@ def getDepth(devicetype,default,Depths):
     while True:
         try:
             depth = input('\nEnter the depth code of this '+devicetype+' segment ['+default+']: ').strip() or default
-            if not re.match(r"^0\d{3}$",depth):
+            if not re.match(r"^\d{4}$",depth):
                 print('ERROR: DATA INVALID\n')
             elif depth in Depths:
                 print('ERROR: The depth code already exists!\n')
@@ -340,7 +340,7 @@ def devicePorts(sid):
         return UTM130Ports
     elif sid.model == 'chkp40':
         return nokia4400Ports
-    elif sid.model == 'chkp20':
+    elif sid.model in ['chkp20','nokia29']:
         return nokia2200Ports
     elif sid.model in ['nokia39','nokia56']:
         return nokia3XXPorts
@@ -361,7 +361,7 @@ def defaultsync(sid):
         return 'none'
     elif sid.model == 'chkp40':
         return 'eth8'
-    elif sid.model == 'chkp20':
+    elif sid.model in ['chkp20','nokia29']:
         return 'eth6'
     elif sid.model in ['nokia39','nokia56']:
         return 'eth4'

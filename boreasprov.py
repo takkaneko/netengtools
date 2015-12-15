@@ -6,6 +6,8 @@ import fwl2l3prov
 import halbl2l3prov
 import lbl2l3prov
 import ipsprov
+import hafwiloprov
+import fwiloprov
 
 def main():
     title ='\n****************************************\n'
@@ -18,11 +20,13 @@ def main():
     options += '3. HA Alteon4408\n'
     options += '4. Stand-alone Alteon4408\n'
     options += '5. IPS only (To monitor multiple devices or an HA *standby*)\n'
+    options += '6. HA firewall SecNet iLO segment (Not common)\n'
+    options += '7. Stand-alone firewall SecNet iLO segment (Not common)\n'
     print(options)
     while True:
         try:
             choice = int(input('Type your selection then hit Enter: '))
-            if 1 <= choice <=5:
+            if 1 <= choice <=7:
                 break
             else:
                 print('ERROR: DATA OUT OF RANGE\n')
@@ -44,6 +48,12 @@ def main():
     if choice == 5:
         print('Starting IPS provisioning...\n')
         ipsprov.main()
+    if choice == 6:
+        print('Starting HA firewall SecNet iLO provisioning...\n')
+        hafwiloprov.main()
+    if choice == 7:
+        print('Starting stand-alone firewall SecNet iLO provisioning...\n')
+        fwiloprov.main()
         
     
 if __name__ == '__main__':

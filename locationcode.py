@@ -230,6 +230,14 @@ class Loccode(str):
                 switch = sswitch
         return switch
 
+    def findsecsw(loc):
+        """
+        Used only for SecNet iLO provisioning.
+        """
+        switch = loc.findsw()
+        sec_switch = switch.replace('p1','s1').replace('p2','s2')
+        return sec_switch
+
     def findfrport(self):
         """
         Returns the front switchport assigned to the network device location.

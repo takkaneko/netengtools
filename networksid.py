@@ -177,4 +177,10 @@ class NWdevice(str):
             peer = NWdevice(peer)
         return peer
     
+    def site(self):
+        """
+        'sjc' or 'iad'
+        """
+        return 'iad' if self.digits[0] == '1' else 'sjc'
+
 
