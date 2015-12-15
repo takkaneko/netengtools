@@ -67,7 +67,10 @@ def getHAdevices(devicetype):
         try:
             mfwloc = Loccode(input("Enter the location code of "+mfw+": "))
             if mfwloc.is_masterloc():
-                break
+                if mfwloc.site == mfw.site():
+                    break
+                else:
+                    print('ERROR: SITE MISMATCH DETECTED\n')
             else:
                 print("ERROR: INVALID LOCATION FOR MASTER\n")
         except AttributeError:
