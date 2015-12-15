@@ -42,7 +42,15 @@ def main():
 
     ###### STANDARD BACK SEGMENT
     # 1. VLAN:
-    iloVlan = getVLAN('SecNet iLO',[])
+    while True:
+        try:
+            iloVlan = getVLAN('SecNet iLO',[])
+            if 900 <= iloVlan <= 949:
+                break
+            else:
+                print('ERROR: ILO VLAN MUST BE BETWEEN 900 AND 949.\n')
+        except AtrributeError:
+            print('ERROR: AttributeError.\n')
 
     # 2. DEPTHCODE:
     iloDepth = getDepth('firewall','9901',[])
@@ -79,7 +87,10 @@ def main():
     while True:
         try:
             vrrp_ip = ip_address(input('Enter the IP address of the iLO gateway/VRRP interface (e.g., 10.176.128.9): '))
-            break
+            if vrrp_ip in ilonet:
+                break
+            else:
+                print('ERROR: '+str(vrrp_ip)+' does not belong to '+str(ilonet)+'.\n')
         except ValueError:
             print('ERROR: INVALID ADDRESS/NETMASK\n')
 
@@ -150,7 +161,7 @@ def main():
 
     HAdeviceForm += '  SwitchPort Speed/Duplex set to: '+speed+'M/Full\n'
     HAdeviceForm += '   (Firewalls should be set to the same speed)\n'
-    HAdeviceForm += '  INFRA4.0 VLAN (Num/Label):   '+str(iloVlan)+'/ilonet_'+alloccode+'\n\n'
+    HAdeviceForm += '  SecNet VLAN (Num/Label):   '+str(iloVlan)+'/ilonet_'+alloccode+'\n\n'
 
     print(HAdeviceForm)
 
