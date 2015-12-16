@@ -166,7 +166,7 @@ def main():
     HAdeviceForm += '  Backup Firewall Connection Port:                gi4/'+str(swpt_number)+'\n\n'
     HAdeviceForm += '  SwitchPort Speed/Duplex set to:                 '+speed+'M/Full\n'
     HAdeviceForm += '   (Firewalls should be set to the same speed)\n'
-    HAdeviceForm += '  SecNet VLAN (Num/Label):   '+str(iloVlan)+'/ilonet_'+alloccode+'\n\n'
+    HAdeviceForm += '  SecNet Community VLAN (Num/Label):   '+str(iloVlan)+'/ilonet_'+alloccode+'\n\n'
 
     print(HAdeviceForm)
 
