@@ -21,6 +21,7 @@ from hafwl2l3prov import  addQuestion
 from hafwl2l3prov import  pickPort
 from hafwl2l3prov import  getInterfaceIP
 from hafwl2l3prov import  devicePorts
+from hafwl2l3prov import  makeSVI
 from fwl2l3prov import getDevices
 from fwl2l3prov import showSummarySA
 
@@ -132,7 +133,13 @@ def main():
 
     #############################################################################
     print('\nThe rest will generate port configs, custom cabling info, allocation form, etc.\n')
-    
+
+    # SVIs backup and configs
+    if frontdepth == '0001':
+        makeSVI(username,password,mfwloc,frontVlan,alloccode,frontnet)
+
+    input('Hit Enter to view the switchport backup scripts.')
+    print()
     # back up port configs
     print('******************************************************')
     print('Use the following to collect switchport backup configs')

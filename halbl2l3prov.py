@@ -25,6 +25,7 @@ from hafwl2l3prov import  getInterfaceIP
 from hafwl2l3prov import  devicePorts
 from hafwl2l3prov import  defaultsync
 from hafwl2l3prov import  chooseSyncInt
+from hafwl2l3prov import  makeSVI
 
 def main():
     ##### Prompts to enter username, password, and allocation code:
@@ -135,7 +136,13 @@ def main():
 
     #############################################################################
     print('\nThe rest will generate port configs, custom cabling info, allocation form, etc.\n')
-    
+
+    # SVIs backup and configs
+    if frontdepth == '0001':
+        makeSVI(username,password,mfwloc,frontVlan,alloccode,frontnet)
+
+    input('Hit Enter to view the switchport backup scripts.')
+    print()
     # back up port configs
     print('******************************************************')
     print('Use the following to collect switchport backup configs')

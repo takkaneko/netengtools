@@ -9,19 +9,19 @@ from ipaddress import ip_address
 from ipaddress import ip_network
 from ipaddress import ip_interface
 from hafwl2l3prov import getUPA
-from hafwl2l3prov import  getVLAN
-from hafwl2l3prov import  getIpsVLAN
-from hafwl2l3prov import  getDepth
-from hafwl2l3prov import  getIPSDepth
-from hafwl2l3prov import  remdup
-from hafwl2l3prov import  getSubnets
-from hafwl2l3prov import  getUniqueSegmentName
-from hafwl2l3prov import  askifMonitor
-from hafwl2l3prov import  addQuestion
-from hafwl2l3prov import  pickPort
-from hafwl2l3prov import  getInterfaceIP
-from hafwl2l3prov import  devicePorts
-
+from hafwl2l3prov import getVLAN
+from hafwl2l3prov import getIpsVLAN
+from hafwl2l3prov import getDepth
+from hafwl2l3prov import getIPSDepth
+from hafwl2l3prov import remdup
+from hafwl2l3prov import getSubnets
+from hafwl2l3prov import getUniqueSegmentName
+from hafwl2l3prov import askifMonitor
+from hafwl2l3prov import addQuestion
+from hafwl2l3prov import pickPort
+from hafwl2l3prov import getInterfaceIP
+from hafwl2l3prov import devicePorts
+from hafwl2l3prov import makeSVI
 
 def getDevices(devicetype):
     """
@@ -217,7 +217,13 @@ def main():
 
     #############################################################################
     print('\nThe rest will generate port configs, custom cabling info, allocation form, etc.\n')
-    
+
+    # SVIs backup and configs
+    if frontdepth == '0001':
+        makeSVI(username,password,mfwloc,frontVlan,alloccode,frontnet)
+
+    input('Hit Enter to view the switchport backup scripts.')
+    print()
     # back up port configs
     print('******************************************************')
     print('Use the following to collect switchport backup configs')

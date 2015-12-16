@@ -383,6 +383,60 @@ def chooseSyncInt(sid):
             print('ERROR: INVALID DATA\n')
     return syncinterface
 
+def makeSVI(username,password,mfwloc,frontVlan,alloccode,frontnets):
+    """
+    Relevant only if a root 0001 is present. 
+    Therefore, makeSVI should always follow an if statement such as:
+    
+    if frontdepth == '0001':
+    """
+    input('Hit Enter to view the SVI backup scripts and the new SVI configs.')
+    print()
+    # backup SVI configs
+    print('**************************')
+    print('Collect SVI backup configs')
+    print('**************************\n')
+
+    for loc in [mfwloc,mfwloc.peerloc()]:
+        svibackup = 'telnet '+loc.findsw()+'\n'
+        svibackup += username+'\n'
+        svibackup += password+'\n'
+        svibackup += 'sh run int vlan '+str(frontVlan)+'\n'
+        svibackup += 'exit\n'
+        svibackup += '\n'
+        print(svibackup)
+    # new SVI configs
+    print('************************')
+    print('New SVI configs to apply')
+    print('************************\n')
+
+    j = 0
+    for loc,role in [(mfwloc,'Master'),(mfwloc.peerloc(),'Standby')]:
+        sviconfigs = 'telnet '+loc.findsw()+'\n'
+        sviconfigs += username+'\n'
+        sviconfigs += password+'\n'
+        sviconfigs += 'conf t\n'
+        sviconfigs += 'no interface vlan '+str(frontVlan)+'\n'
+        sviconfigs += 'interface vlan '+str(frontVlan)+'\n'
+        sviconfigs += ' desc SHA Solution '+role+' Uplink router - '+alloccode+'-0001\n'
+        sviconfigs += ' ip address '+str(frontnets[0][2+j])+' '+str(frontnets[0].netmask)+'\n'
+        sviconfigs += ' no ip redirects\n'
+        sviconfigs += ' no ip unreachables\n'
+        sviconfigs += ' no ip proxy-arp\n'
+        sviconfigs += ' ip ospf network non-broadcast\n'
+        sviconfigs += ' load-interval 30'
+        sviconfigs += ' standby 100 ip '+str(frontnets[0][1])+'\n'
+        sviconfigs += ' standby 100 priority '+str(45-j*10)+'\n'
+        sviconfigs += ' standby 100 preempt delay minimum 10\n'
+        sviconfigs += ' standby 100 authentication ChARTR01\n'
+        sviconfigs += ' no shut\n'
+        sviconfigs += ' end\n'
+        sviconfigs += 'exit\n'
+        sviconfigs += '\n'
+        j += 1
+        print(sviconfigs)
+
+
 def main():
     ##### Prompts to enter username, password, and allocation code:
     [username,password,alloccode] = getUPA()
@@ -493,6 +547,12 @@ def main():
     #############################################################################
     print('\nThe rest will generate port configs, custom cabling info, allocation form, etc.\n')
     
+    # SVIs backup and configs
+    if frontdepth == '0001':
+        makeSVI(username,password,mfwloc,frontVlan,alloccode,frontnet)
+
+    input('Hit Enter to view the switchport backup scripts.')
+    print()
     # back up port configs
     print('******************************************************')
     print('Use the following to collect switchport backup configs')
