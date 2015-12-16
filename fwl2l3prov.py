@@ -59,7 +59,10 @@ def getDevices(devicetype):
         try:
             nwdeviceloc = Loccode(input("Enter the location code of "+nwdevice+": "))
             if nwdeviceloc.is_NWloc():
-                break
+                if mfwloc.site == mfw.site():
+                    break
+                else:
+                    print('ERROR: SITE MISMATCH DETECTED\n')
             else:
                 print("ERROR: INVALID LOCATION FOR MASTER\n")
         except AttributeError:
