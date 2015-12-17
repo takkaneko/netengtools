@@ -390,21 +390,39 @@ def makeSVI(username,password,mfwloc,frontVlan,alloccode,frontnets):
     
     if frontdepth == '0001':
     """
-    input('Hit Enter to view the SVI backup scripts and the new SVI configs.')
+    input('Hit Enter to collect SVI backup scripts.')
     print()
+    import pexpect
+    from pexpect import EOF
+    from pexpect import TIMEOUT
+    from pexpect import ExceptionPexpect
     # backup SVI configs
-    print('**************************')
-    print('Collect SVI backup configs')
-    print('**************************\n')
+    print('********************************')
+    print('Collecting SVI backup configs...')
+    print('********************************\n')
 
     for loc in [mfwloc,mfwloc.peerloc()]:
-        svibackup = 'telnet '+loc.findsw()+'\n'
-        svibackup += username+'\n'
-        svibackup += password+'\n'
-        svibackup += 'sh run int vlan '+str(frontVlan)+'\n'
-        svibackup += 'exit\n'
-        svibackup += '\n'
-        print(svibackup)
+        try:
+            child = pexpect.spawnu('telnet '+loc.findsw()+'.dn.net')
+            child.expect('Username: ')
+            child.sendline(username)
+            child.expect('Password: ',timeout=3)
+            child.sendline(password)
+            child.expect('6513-'+loc.findsw()+'-c\d{1,2}#',timeout=3)
+            print(loc.findsw()+':\n')
+            child.sendline('sh run int vlan '+str(frontVlan))
+            child.expect('6513-'+loc.findsw()+'-c\d{1,2}#')
+            print(child.before)
+            child.sendline('exit')
+        except (EOF,TIMEOUT,ExceptionPexpect):
+            print('ERROR: Unable to collect switchport configs from '+loc.findsw())
+            print('Try collecting configs manually instead:')
+            print()
+            print('  '+loc.findsw()+':')
+            print('    sh run int vlan '+str(frontVlan))
+            print()
+    input('Hit Enter to view the new SVI configs.')
+    print()
     # new SVI configs
     print('************************')
     print('New SVI configs to apply')
@@ -436,6 +454,57 @@ def makeSVI(username,password,mfwloc,frontVlan,alloccode,frontnets):
         j += 1
         print(sviconfigs)
 
+def backupPortsHA(mfwloc,ipsloc,username,password,Ports,ips):
+    # back up port configs
+    import pexpect
+    from pexpect import EOF
+    from pexpect import TIMEOUT
+    from pexpect import ExceptionPexpect
+    print('***************************************')
+    print('Collecting switchport backup configs...')
+    print('***************************************\n')
+    
+    backups = [(mfwloc,'5'),(mfwloc.peerloc(),'6')]
+    for loc,mod in backups:
+        try:
+            child = pexpect.spawnu('telnet '+loc.findsw()+'.dn.net')
+            child.expect('Username: ')
+            child.sendline(username)
+            child.expect('Password: ',timeout=3)
+            child.sendline(password)
+            child.expect('6513-'+loc.findsw()+'-c\d{1,2}#',timeout=3)
+            print(loc.findsw()+':\n')
+            child.sendline('sh run int '+loc.findfrport())
+            child.expect('6513-'+loc.findsw()+'-c\d{1,2}#')
+            print(child.before)
+            child.sendline('sh run int '+loc.findbkport())
+            child.expect('6513-'+loc.findsw()+'-c\d{1,2}#')
+            print(child.before)
+            for port in Ports[2:]:
+                child.sendline('sh run int gi'+loc.findmod()+'/'+str(port))
+                child.expect('6513-'+loc.findsw()+'-c\d{1,2}#')
+                print(child.before)
+            if ips != 'none' and ipsloc.findmod() == mod:
+                child.sendline('sh run int '+ipsloc.findfrport())
+                child.expect('6513-'+ipsloc.findsw()+'-c\d{1,2}#')
+                print(child.before)
+                child.sendline('sh run int '+ipsloc.findbkport())
+                child.expect('6513-'+ipsloc.findsw()+'-c\d{1,2}#')
+                print(child.before)
+            child.sendline('exit')
+        except (EOF,TIMEOUT,ExceptionPexpect):
+            print('ERROR: Unable to collect switchport configs from '+loc.findsw())
+            print('Try collecting configs manually instead:')
+            print()
+            print('  '+loc.findsw()+':')
+            print('    sh run int '+loc.findfrport())
+            print('    sh run int '+loc.findbkport())
+            for port in Ports[2:]:
+                print('    sh run int gi'+loc.findmod()+'/'+str(port))
+            if ips != 'none' and ipsloc.findmod() == mod:
+                print('    sh run int '+ipsloc.findfrport())
+                print('    sh run int '+ipsloc.findbkport())
+            print()
 
 def main():
     ##### Prompts to enter username, password, and allocation code:
@@ -551,33 +620,17 @@ def main():
     if frontdepth == '0001':
         makeSVI(username,password,mfwloc,frontVlan,alloccode,frontnet)
 
-    input('Hit Enter to view the switchport backup scripts.')
+    input('Hit Enter to collect switchport backup configs.')
     print()
     # back up port configs
-    print('******************************************************')
-    print('Use the following to collect switchport backup configs')
-    print('******************************************************\n')
-    
-    backups = [(mfwloc,'5'),(sfwloc,'6')]
-    for loc,mod in backups:
-        backup = 'telnet '+loc.findsw()+'\n'
-        backup += username+'\n'
-        backup += password+'\n'
-        backup += 'sh run int '+loc.findfrport()+'\n'
-        backup += 'sh run int '+loc.findbkport()+'\n'
-        for port in Ports[2:]:
-            backup += 'sh run int gi'+loc.findmod()+'/'+str(port)+'\n'
-        if ips != 'none' and ipsloc.findmod() == mod:
-            backup += 'sh run int '+ipsloc.findfrport()+'\n'
-            backup += 'sh run int '+ipsloc.findbkport()+'\n'
-        backup += 'exit\n'
-        print(backup)
+    backupPortsHA(mfwloc,ipsloc,username,password,Ports,ips)
+
     input('Hit Enter to view the new switchport configs.')
     print()
     # new port configs
-    print('*************************************************')
-    print('Use the following to apply new switchport configs')
-    print('*************************************************\n')
+    print('*******************************')
+    print('New switchport configs to apply')
+    print('*******************************\n')
     
     swconfigs = [(mfwloc,'m',mfw,'5'),(sfwloc,'s',sfw,'6')]
     for loc,role,sid,mod in swconfigs:
