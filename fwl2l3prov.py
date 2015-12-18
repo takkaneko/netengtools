@@ -111,6 +111,70 @@ def showSummarySA(nwdevice,nwdeviceloc,IPS,IPSloc):
         output += ' Back:  '+loc.findsw()+' '+loc.findbkport()+'\n\n'
     print(output)
 
+def backupPorts(mfwloc,ipsloc,username,password,Ports,ips):
+    # back up port configs
+    import pexpect
+    from pexpect import EOF
+    from pexpect import TIMEOUT
+    from pexpect import ExceptionPexpect
+    print('***************************************')
+    print('Collecting switchport backup configs...')
+    print('***************************************\n')
+    
+    try:
+        child = pexpect.spawnu('telnet '+mfwloc.findsw()+'.dn.net')
+        child.expect('Username: ')
+        child.sendline(username)
+        child.expect('Password: ',timeout=3)
+        child.sendline(password)
+        child.expect('6513-'+mfwloc.findsw()+'-c\d{1,2}#',timeout=3)
+        print(mfwloc.findsw()+':\n')
+        child.sendline('sh run int '+mfwloc.findfrport())
+        child.expect('6513-'+mfwloc.findsw()+'-c\d{1,2}#')
+        print(child.before)
+        child.sendline('sh run int '+mfwloc.findbkport())
+        child.expect('6513-'+mfwloc.findsw()+'-c\d{1,2}#')
+        print(child.before)
+        for port in Ports[2:]:
+            child.sendline('sh run int gi'+mfwloc.findmod()+'/'+str(port))
+            child.expect('6513-'+mfwloc.findsw()+'-c\d{1,2}#')
+            print(child.before)
+        child.sendline('exit')
+    except (EOF,TIMEOUT,ExceptionPexpect):
+        print('ERROR: Unable to collect switchport backups from '+mfwloc.findsw())
+        print('Try collecting configs manually instead:\n')
+        print('  '+mfwloc.findsw()+':')
+        print('    sh run int '+mfwloc.findfrport())
+        print('    sh run int '+mfwloc.findbkport())
+        for port in Ports[2:]:
+            print('    sh run int gi'+mfwloc.findmod()+'/'+str(port))
+        print()
+
+    if ips != 'none':
+        try:
+            child2 = pexpect.spawnu('telnet '+ipsloc.findsw()+'.dn.net')
+            child2.expect('Username: ')
+            child2.sendline(username)
+            child2.expect('Password: ',timeout=3)
+            child2.sendline(password)
+            child2.expect('6513-'+ipsloc.findsw()+'-c\d{1,2}#',timeout=3)
+            if mfwloc.findmod() != ipsloc.findmod():
+                print('\n'+ipsloc.findsw()+':\n')
+            child2.sendline('sh run int '+ipsloc.findfrport())
+            child2.expect('6513-'+ipsloc.findsw()+'-c\d{1,2}#')
+            print(child2.before)
+            child2.sendline('sh run int '+ipsloc.findbkport())
+            child2.expect('6513-'+ipsloc.findsw()+'-c\d{1,2}#')
+            print(child2.before)
+            child2.sendline('exit')
+        except (EOF,TIMEOUT,ExceptionPexpect):
+            print('ERROR: Unable to collect IPS switchport backups from '+ipsloc.findsw())
+            print('Try collecting configs manually instead:\n')
+            print('  '+ipsloc.findsw()+':')
+            print('    sh run int '+ipsloc.findfrport())
+            print('    sh run int '+ipsloc.findbkport())
+            print()
+
 def main():
     ##### Prompts to enter username, password, and allocation code:
     [username,password,alloccode] = getUPA()
@@ -222,32 +286,11 @@ def main():
     if frontdepth == '0001':
         makeSVI(username,password,mfwloc,frontVlan,alloccode,frontnet)
 
-    input('Hit Enter to view the switchport backup scripts.')
+    input('Hit Enter to collect switchport backup configs.')
     print()
     # back up port configs
-    print('******************************************************')
-    print('Use the following to collect switchport backup configs')
-    print('******************************************************\n')
-    
-    backup = 'telnet '+mfwloc.findsw()+'\n'
-    backup += username+'\n'
-    backup += password+'\n'
-    backup += 'sh run int '+mfwloc.findfrport()+'\n'
-    backup += 'sh run int '+mfwloc.findbkport()+'\n'
-    for port in Ports[2:]:
-        backup += 'sh run int gi'+mfwloc.findmod()+'/'+str(port)+'\n'
-    if ips != 'none':
-        if mfwloc.findmod() != ipsloc.findmod():
-            backup += 'exit\n\n'
-            backup += 'telnet '+ipsloc.findsw()+'\n'
-            backup += username+'\n'
-            backup += password+'\n'
-        backup += 'sh run int '+ipsloc.findfrport()+'\n'
-        backup += 'sh run int '+ipsloc.findbkport()+'\n'
-        backup += 'exit\n'
-    else:
-        backup += 'exit\n'
-    print(backup)
+    backupPorts(mfwloc,ipsloc,username,password,Ports,ips)
+
     input('Hit Enter to view the new switchport configs.')
     print()
     # new port configs

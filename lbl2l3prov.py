@@ -24,7 +24,7 @@ from hafwl2l3prov import  devicePorts
 from hafwl2l3prov import  makeSVI
 from fwl2l3prov import getDevices
 from fwl2l3prov import showSummarySA
-
+from fwl2l3prov import backupPorts
 
 
 def main():
@@ -138,32 +138,11 @@ def main():
     if frontdepth == '0001':
         makeSVI(username,password,mfwloc,frontVlan,alloccode,frontnet)
 
-    input('Hit Enter to view the switchport backup scripts.')
+    input('Hit Enter to collect switchport backup configs.')
     print()
     # back up port configs
-    print('******************************************************')
-    print('Use the following to collect switchport backup configs')
-    print('******************************************************\n')
-    
-    backup = 'telnet '+mfwloc.findsw()+'\n'
-    backup += username+'\n'
-    backup += password+'\n'
-    backup += 'sh run int '+mfwloc.findfrport()+'\n'
-    backup += 'sh run int '+mfwloc.findbkport()+'\n'
-    for port in Ports[2:]:
-        backup += 'sh run int gi'+mfwloc.findmod()+'/'+str(port)+'\n'
-    if ips != 'none':
-        if mfwloc.findmod() != ipsloc.findmod():
-            backup += 'exit\n\n'
-            backup += 'telnet '+ipsloc.findsw()+'\n'
-            backup += username+'\n'
-            backup += password+'\n'
-        backup += 'sh run int '+ipsloc.findfrport()+'\n'
-        backup += 'sh run int '+ipsloc.findbkport()+'\n'
-        backup += 'exit\n'
-    else:
-        backup += 'exit\n'
-    print(backup)
+    backupPorts(mfwloc,ipsloc,username,password,Ports,ips)
+
     input('Hit Enter to view the new switchport configs.')
     print()
     # new port configs
