@@ -11,9 +11,9 @@
 import re
 from locationcode import Loccode
 from networksid import NWdevice
-from hafwl2l3prov import getUPA
-from hafwl2l3prov import getInterfaceIP
-from hafwl2l3prov import devicePorts
+from resources import getUPA
+from resources import getInterfaceIP
+from resources import devicePorts
 
 def getIPS():
     """

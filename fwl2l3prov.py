@@ -1,179 +1,23 @@
 #!/usr/bin/env python3
 # fwl2l3prov.py
 
-import re
-import getpass
-from locationcode import Loccode
-from networksid import NWdevice
-from ipaddress import ip_address
-from ipaddress import ip_network
-from ipaddress import ip_interface
-from hafwl2l3prov import getUPA
-from hafwl2l3prov import getVLAN
-from hafwl2l3prov import getIpsVLAN
-from hafwl2l3prov import getDepth
-from hafwl2l3prov import getIPSDepth
-from hafwl2l3prov import remdup
-from hafwl2l3prov import getSubnets
-from hafwl2l3prov import getUniqueSegmentName
-from hafwl2l3prov import askifMonitor
-from hafwl2l3prov import addQuestion
-from hafwl2l3prov import pickPort
-from hafwl2l3prov import getInterfaceIP
-from hafwl2l3prov import devicePorts
-from hafwl2l3prov import makeSVI
+from resources import getUPA
+from resources import getVLAN
+from resources import getIpsVLAN
+from resources import getDepth
+from resources import getIPSDepth
+from resources import getSubnets
+from resources import getUniqueSegmentName
+from resources import askifMonitor
+from resources import addQuestion
+from resources import pickPort
+from resources import getInterfaceIP
+from resources import devicePorts
+from resources import makeSVI
 
-def getDevices(devicetype):
-    """
-    devicetype must be either 'firewall' or 'loadbalancer.'
-    Prompts to enter SIDs/speed/locations of Stand-alone gear & IPS (w/ their error handlings).
-    Only accepts the devicetype you specify.
-    Returns the provided data as a list for use in main().
-    
-    nwdevice = newtwork device ID (firewall or loadbalancer)
-    speed = 1000 or 100 (int)
-    nwdeviceloc = network device location
-    ips = IPS ID or 'none'
-    """
-    while True:
-        try:
-            nwdevice = NWdevice(input("Enter the "+devicetype+" ID: ").lower().strip())
-            if nwdevice.is_fw_or_lb(devicetype) and nwdevice.is_solo():
-                break
-            else:
-                print("ERROR: SERVICE ID INVALID\n")
-        except AttributeError:
-            print('ERROR: SERVICE ID INVALID\n')
-    while devicetype == 'firewall':
-        try:
-            speed = input('Enter the interface speed (Mbps)[1000]: ').strip() or '1000'
-            if not re.match(r"^10{2,3}$",speed):
-                print('ERROR: DATA INVALID')
-            else:
-                print('OK - speed = '+speed+'Mbps')
-                break
-        except ValueError:
-            print('ERROR: DATA INVALID')
-    speed = speed if devicetype == 'firewall' else '1000'
-    while True:
-        try:
-            nwdeviceloc = Loccode(input("Enter the location code of "+nwdevice+": "))
-            if nwdeviceloc.is_NWloc():
-                if nwdeviceloc.site == nwdevice.site():
-                    break
-                else:
-                    print('ERROR: SITE MISMATCH DETECTED\n')
-            else:
-                print("ERROR: INVALID LOCATION FOR MASTER\n")
-        except AttributeError:
-            print("ERROR: INVALID LOCATION\n")
-    while True:
-        try:
-            ips = input("Enter an IPS ID that monitors the "+devicetype+" segment(s), or type 'none': ").lower().strip().replace("'","")
-
-            if ips == 'none' or NWdevice(ips).is_ips():
-                break
-            else:
-                print('ERROR: INVALID SID FORMAT\n')
-        except AttributeError:
-            print('ERROR: SERVICE ID INVALID\n')
-    if ips != 'none':
-        while True:
-            try:
-                ipsloc = Loccode(input("Enter the location code of "+ips+": "))
-                if ipsloc.is_NWloc() and (nwdeviceloc.srr == ipsloc.srr and nwdeviceloc.rack_noa == ipsloc.rack_noa) and nwdeviceloc != ipsloc:
-                    print("OK")
-                    break
-                elif nwdeviceloc == ipsloc:
-                    print("ERROR: The "+devicetype+" and IPS cannot take the same slot!\n")
-                elif not (nwdeviceloc.srr == ipsloc.srr and nwdeviceloc.rack_noa == ipsloc.rack_noa):
-                    print("ERROR: The "+devicetype+" and IPS must be in the same rack\n")
-                else:
-                    print("ERROR: INVALID LOCATION\n")
-            except AttributeError:
-                print("ERROR: SYNTAX INVALID\n")
-    else:
-        ipsloc = ''
-        print("OK no IPS!")
-    return [nwdevice,speed,nwdeviceloc,ips,ipsloc]
-
-def showSummarySA(nwdevice,nwdeviceloc,IPS,IPSloc):
-    if IPS != 'none':
-        Devices = [[nwdevice,nwdeviceloc],
-                   [IPS,IPSloc]]
-    else:
-        Devices = [[nwdevice,nwdeviceloc]]
-    output = '\n'
-    output += 'The standard front/back switchports of the devices that you entered:\n\n'
-    for sid,loc in Devices:
-        output += sid+' ('+loc+'):\n'
-        output += ' Front: '+loc.findsw()+' '+loc.findfrport()+'\n'
-        output += ' Back:  '+loc.findsw()+' '+loc.findbkport()+'\n\n'
-    print(output)
-
-def backupPorts(mfwloc,ipsloc,username,password,Ports,ips):
-    # back up port configs
-    import pexpect
-    from pexpect import EOF
-    from pexpect import TIMEOUT
-    from pexpect import ExceptionPexpect
-    print('***************************************')
-    print('Collecting switchport backup configs...')
-    print('***************************************\n')
-    
-    try:
-        child = pexpect.spawnu('telnet '+mfwloc.findsw()+'.dn.net')
-        child.expect('Username: ')
-        child.sendline(username)
-        child.expect('Password: ',timeout=3)
-        child.sendline(password)
-        child.expect('6513-'+mfwloc.findsw()+'-c\d{1,2}#',timeout=3)
-        print(mfwloc.findsw()+':\n')
-        child.sendline('sh run int '+mfwloc.findfrport())
-        child.expect('6513-'+mfwloc.findsw()+'-c\d{1,2}#')
-        print(child.before)
-        child.sendline('sh run int '+mfwloc.findbkport())
-        child.expect('6513-'+mfwloc.findsw()+'-c\d{1,2}#')
-        print(child.before)
-        for port in Ports[2:]:
-            child.sendline('sh run int gi'+mfwloc.findmod()+'/'+str(port))
-            child.expect('6513-'+mfwloc.findsw()+'-c\d{1,2}#')
-            print(child.before)
-        child.sendline('exit')
-    except (EOF,TIMEOUT,ExceptionPexpect):
-        print('ERROR: Unable to collect switchport backups from '+mfwloc.findsw())
-        print('Try collecting configs manually instead:\n')
-        print('  '+mfwloc.findsw()+':')
-        print('    sh run int '+mfwloc.findfrport())
-        print('    sh run int '+mfwloc.findbkport())
-        for port in Ports[2:]:
-            print('    sh run int gi'+mfwloc.findmod()+'/'+str(port))
-        print()
-
-    if ips != 'none':
-        try:
-            child2 = pexpect.spawnu('telnet '+ipsloc.findsw()+'.dn.net')
-            child2.expect('Username: ')
-            child2.sendline(username)
-            child2.expect('Password: ',timeout=3)
-            child2.sendline(password)
-            child2.expect('6513-'+ipsloc.findsw()+'-c\d{1,2}#',timeout=3)
-            if mfwloc.findmod() != ipsloc.findmod():
-                print('\n'+ipsloc.findsw()+':\n')
-            child2.sendline('sh run int '+ipsloc.findfrport())
-            child2.expect('6513-'+ipsloc.findsw()+'-c\d{1,2}#')
-            print(child2.before)
-            child2.sendline('sh run int '+ipsloc.findbkport())
-            child2.expect('6513-'+ipsloc.findsw()+'-c\d{1,2}#')
-            print(child2.before)
-            child2.sendline('exit')
-        except (EOF,TIMEOUT,ExceptionPexpect):
-            print('ERROR: Unable to collect IPS switchport backups from '+ipsloc.findsw())
-            print('Try collecting configs manually instead:\n')
-            print('  '+ipsloc.findsw()+':')
-            print('    sh run int '+ipsloc.findfrport())
-            print('    sh run int '+ipsloc.findbkport())
-            print()
+from resources import getDevices
+from resources import showSummary # was showSummarySA
+from resources import backupPorts
 
 def main():
     ##### Prompts to enter username, password, and allocation code:
@@ -183,7 +27,7 @@ def main():
     [mfw,speed,mfwloc,ips,ipsloc] = getDevices('firewall')
 
     ###### Summary Output of Devices:
-    showSummarySA(mfw,mfwloc,ips,ipsloc)
+    showSummary(mfw,mfwloc,ips,ipsloc)
 
     ###### Prompts to select a sync port:
     availPorts = devicePorts(mfw)

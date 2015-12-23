@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# hafwiloprov.py
+# fwiloprov.py
 
 import re
 import getpass
@@ -8,25 +8,11 @@ from networksid import NWdevice
 from ipaddress import ip_address
 from ipaddress import ip_network
 from ipaddress import ip_interface
-from hafwl2l3prov import getUPA
-from hafwl2l3prov import  getHAdevices
-from fwl2l3prov import getDevices
-from hafwl2l3prov import  showSummary
-from fwl2l3prov import showSummarySA
-from hafwl2l3prov import  getVLAN
-from hafwl2l3prov import  getIpsVLAN
-from hafwl2l3prov import  getDepth
-from hafwl2l3prov import  getIPSDepth
-from hafwl2l3prov import  remdup
-from hafwl2l3prov import  getSubnets
-from hafwl2l3prov import  getUniqueSegmentName
-from hafwl2l3prov import  askifMonitor
-from hafwl2l3prov import  addQuestion
-from hafwl2l3prov import  pickPort
-from hafwl2l3prov import  getInterfaceIP
-from hafwl2l3prov import  devicePorts
-from hafwl2l3prov import  defaultsync
-from hafwl2l3prov import  chooseSyncInt
+from resources import getUPA
+from resources import getDevices
+from resources import getVLAN
+from resources import getDepth
+from resources import devicePorts
 
 def main():
     print('WARNING: THIS OPTION SHOULD BE USED TO PROVISION A *SECNET* ILO SEGMENT')
