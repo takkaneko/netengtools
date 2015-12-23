@@ -3,7 +3,7 @@
 
 from resources import getUPA
 from resources import getHAdevices
-from resources import showSummaryHA # was showSummary
+from resources import showSummaryHA
 from resources import getVLAN
 from resources import getIpsVLAN
 from resources import getDepth
@@ -28,7 +28,7 @@ def main():
     [mfw,speed,mfwloc,sfw,sfwloc,ips,ipsloc] = getHAdevices('firewall')
 
     ###### Summary Output of Devices:
-    showSummary(mfw,mfwloc,sfw,sfwloc,ips,ipsloc)
+    showSummaryHA(mfw,mfwloc,sfw,sfwloc,ips,ipsloc)
 
     ###### Prompts to select a sync port:
     syncInt = chooseSyncInt(mfw)

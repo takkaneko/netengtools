@@ -140,24 +140,6 @@ def main():
     # back up port configs
     backupPortsHA(mfwloc,ipsloc,username,password,Ports,ips)
 
-#    print('******************************************************')
-#    print('Use the following to collect switchport backup configs')
-#    print('******************************************************\n')
-#    
-#    backups = [(mfwloc,'5'),(sfwloc,'6')]
-#    for loc,mod in backups:
-#        backup = 'telnet '+loc.findsw()+'\n'
-#        backup += username+'\n'
-#        backup += password+'\n'
-#        backup += 'sh run int '+loc.findfrport()+'\n'
-#        backup += 'sh run int '+loc.findbkport()+'\n'
-#        for port in Ports[2:]:
-#            backup += 'sh run int gi'+loc.findmod()+'/'+str(port)+'\n'
-#        if ips != 'none' and ipsloc.findmod() == mod:
-#            backup += 'sh run int '+ipsloc.findfrport()+'\n'
-#            backup += 'sh run int '+ipsloc.findbkport()+'\n'
-#        backup += 'exit\n'
-#        print(backup)
     input('Hit Enter to view the new switchport configs.')
     print()
     # new port configs
