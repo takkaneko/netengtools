@@ -735,7 +735,10 @@ def getIPS():
         try:
             ipsloc = Loccode(input("Enter the location code of "+ips+": "))
             if ipsloc.is_NWloc():
-                break
+                if ipsloc.site == ips.site():
+                    break
+                else:
+                    print('ERROR: SITE MISMATCH DETECTED\n')
             else:
                 print("ERROR: INVALID LOCATION\n")
         except AttributeError:
