@@ -11,6 +11,10 @@
 import re
 from locationcode import Loccode
 from networksid import NWdevice
+import pexpect
+from pexpect import EOF
+from pexpect import TIMEOUT
+from pexpect import ExceptionPexpect
 from resources import getUPA
 from resources import getInterfaceIP
 from resources import devicePorts
@@ -73,17 +77,33 @@ def main():
     print('\nThe rest will generate port configs, custom cabling info, allocation form, etc.\n')
     
     # back up port configs
-    print('******************************************************')
-    print('Use the following to collect switchport backup configs')
-    print('******************************************************\n')
+    print('***************************************')
+    print('Collecting switchport backup configs...')
+    print('***************************************\n')
 
-    backup = 'telnet '+ipsloc.findsw()+'\n'
-    backup += username+'\n'
-    backup += password+'\n'
-    backup += 'sh run int '+ipsloc.findfrport()+'\n'
-    backup += 'sh run int '+ipsloc.findbkport()+'\n'
-    backup += 'exit\n'
-    print(backup)
+    try:
+        child = pexpect.spawnu('telnet '+ipsloc.findsw()+'.dn.net')
+        child.expect('Username: ',timeout=3)
+        child.sendline(username)
+        child.expect('Password: ',timeout=3)
+        child.sendline(password)
+        child.expect('6513-'+ipsloc.findsw()+'-c\d{1,2}#',timeout=3)
+        print(ipsloc.findsw()+':\n')
+        child.sendline('sh run int '+ipsloc.findfrport())
+        child.expect('6513-'+ipsloc.findsw()+'-c\d{1,2}#',timeout=3)
+        print(child.before)
+        child.sendline('sh run int '+ipsloc.findbkport())
+        child.expect('6513-'+ipsloc.findsw()+'-c\d{1,2}#',timeout=3)
+        print(child.before)
+        child.sendline('exit')
+    except (EOF,TIMEOUT,ExceptionPexpect):
+        print('ERROR: Unable to collect switchport configs from '+ipsloc.findsw())
+        print('Try collecting configs manually instead:')
+        print()
+        print('  '+ipsloc.findsw()+':')
+        print('    sh run int '+ipsloc.findfrport())
+        print('    sh run int '+ipsloc.findbkport())
+        print()        
 
     input('Hit Enter to view the new switchport configs.')
     print()
