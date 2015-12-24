@@ -185,7 +185,7 @@ def main():
             swconf += ' no shut\n'
             swconf += '!\n'
             aux += 1
-        if ips != 'none' and ipsloc.findmod() == mod:
+        if ips != 'none' and loc.findsw() == ipsloc.findsw():
             swconf += 'int '+ipsloc.findfrport()+'\n'
             swconf += ' description RESERVED: '+ipsloc.rrs.replace('.','-')+'-fr '+alloccode+' '+ips+'\n'
             swconf += ' switchport\n'

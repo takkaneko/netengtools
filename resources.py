@@ -529,7 +529,7 @@ def backupPortsHA(mfwloc,ipsloc,username,password,Ports,ips):
                 child.sendline('sh run int gi'+loc.findmod()+'/'+str(port))
                 child.expect('6513-'+loc.findsw()+'-c\d{1,2}#')
                 print(child.before)
-            if ips != 'none' and ipsloc.findmod() == mod:
+            if ips != 'none' and loc.findsw() == ipsloc.findsw():
                 child.sendline('sh run int '+ipsloc.findfrport())
                 child.expect('6513-'+ipsloc.findsw()+'-c\d{1,2}#')
                 print(child.before)
