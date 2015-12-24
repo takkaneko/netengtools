@@ -3,6 +3,10 @@
 
 import re
 import getpass
+import pexpect
+from pexpect import EOF
+from pexpect import TIMEOUT
+from pexpect import ExceptionPexpect
 from locationcode import Loccode
 from networksid import NWdevice
 from ipaddress import ip_address
@@ -84,17 +88,31 @@ def main():
     print('\nThe rest will generate port configs, custom cabling info, allocation form, etc.\n')
     
     # back up port configs
-    print('******************************************************')
-    print('Use the following to collect switchport backup configs')
-    print('******************************************************\n')
+    print('***************************************')
+    print('Collecting switchport backup configs...')
+    print('***************************************\n')
     
     for loc in [mfwloc,sfwloc]:
-        backup = 'telnet '+loc.findsecsw()+'\n'
-        backup += username+'\n'
-        backup += password+'\n'
-        backup += 'sh run int gi4/'+str(swpt_number)+'\n'
-        backup += 'exit\n'
-        print(backup)
+        try:
+            child = pexpect.spawnu('telnet '+loc.findsecsw()+'.dn.net')
+            child.expect('Username: ',timeout=3)
+            child.sendline(username)
+            child.expect('Password: ',timeout=3)
+            child.sendline(password)
+            child.expect('6513-'+loc.findsecsw()+'-sec-c\d{1,2}#',timeout=3)
+            print(loc.findsecsw()+':\n')
+            child.sendline('sh run int gi4/'+str(swpt_number))
+            child.expect('6513-'+loc.findsecsw()+'-sec-c\d{1,2}#')
+            print(child.before)
+            child.sendline('exit')
+        except (EOF,TIMEOUT,ExceptionPexpect):
+            print('ERROR: Unable to collect switchport configs from '+loc.findsecsw())
+            print('Try collecting configs manually instead:')
+            print()
+            print('  '+loc.findsecsw()+':')
+            print('    sh run int gi4/'+str(swpt_number))
+            print()
+
     input('Hit Enter to view the new switchport configs.')
     print()
     # new port configs
