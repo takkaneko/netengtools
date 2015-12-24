@@ -13,6 +13,24 @@ from pexpect import EOF
 from pexpect import TIMEOUT
 from pexpect import ExceptionPexpect
 
+#####THE FOLLOWING FUNCTIONS ARE USED IN BOTH HA & NON-HA PROVISIONING SCRIPTS#####
+
+# getUPA
+# getVLAN
+# getIpsVLAN
+# getDepth
+# getIPSDepth
+# getSubnets
+# getUniqueSegmentName
+# askifMonitor
+# addQuestion
+# pickPort
+# getInterfaceIP
+# devicePorts
+# defaultsync
+# chooseSyncInt
+# makeSVI
+
 def getUPA():
     """
     UPA stands for: username/password/allocation code.
@@ -32,206 +50,6 @@ def getUPA():
     print('OK')
     
     return [username,password,alloccode]
-
-def getHAdevices(devicetype):
-    """
-    devicetype must be either 'firewall' or 'loadbalancer.'
-    Prompts to enter SIDs/speed/locations of HA pair & IPS (w/ their error handlings).
-    Only accepts the devicetype you specify.
-    Returns the provided data as a list for use in main().
-    
-    mfw = master device ID (firewall or loadbalancer)
-    speed = 1000 or 100 (int)
-    mfwloc = master device location
-    sfw = secondary device ID (firewall or loadbalancer)
-    sfwloc = secondary device location
-    ips = IPS ID or 'none'
-    """
-    #import re
-    #from networksid import NWdevice
-    #from locationcode import Loccode
-    while True:
-        try:
-            mfw = input("Enter the master "+devicetype+" ID: ").lower().strip()
-            if NWdevice(mfw).is_master() and NWdevice(mfw).is_fw_or_lb(devicetype):
-                mfw = NWdevice(mfw)
-                break
-            else:
-                print("ERROR: SERVICE ID INVALID\n")
-        except AttributeError:
-            print('ERROR: SERVICE ID INVALID\n')
-    while devicetype == 'firewall':
-        try:
-            speed = input('Enter the interface speed (Mbps)[1000]: ').strip() or '1000'
-            if not re.match(r"^10{2,3}$",speed):
-                print('ERROR: DATA INVALID')
-            else:
-                print('OK - speed = '+speed+'Mbps')
-                break
-        except ValueError:
-            print('ERROR: DATA INVALID')
-    speed = speed if devicetype == 'firewall' else '1000'
-    while True:
-        try:
-            mfwloc = Loccode(input("Enter the location code of "+mfw+": "))
-            if mfwloc.is_masterloc():
-                if mfwloc.site == mfw.site():
-                    break
-                else:
-                    print('ERROR: SITE MISMATCH DETECTED\n')
-            else:
-                print("ERROR: INVALID LOCATION FOR MASTER\n")
-        except AttributeError:
-            print("ERROR: INVALID LOCATION\n")
-    while True:
-        try:
-            sfw = mfw.peersid()
-            break
-        except UnboundLocalError:
-            print('\nThis case requires you to provide a secondary '+devicetype+' ID manually.')
-            sfw = input('Enter the secondary '+devicetype+' ID: ').lower().strip()
-            if re.match(r"^(netsvc)+(\d{5})$", sfw) and NWdevice(sfw) != mfw:
-                break
-            elif re.match(r"^(netsvc)+(\d{5})$", sfw) and NWdevice(sfw) == mfw:
-                print('ERROR: Master and secondary cannot share the same ID!')
-    sfwloc = mfwloc.peerloc()
-    print('OK')
-    print("The location of secondary "+sfw+" is {0}.".format(sfwloc))
-    while True:
-        try:
-            ips = input("Enter an IPS ID that goes to the master segment, or type 'none': ").lower().strip().replace("'","")
-
-            if ips == 'none' or NWdevice(ips).is_ips():
-                break
-            else:
-                print('ERROR: INVALID SID FORMAT\n')
-        except AttributeError:
-            print('ERROR: SERVICE ID INVALID\n')
-    if ips != 'none':
-        while True:
-            try:
-                ipsloc = Loccode(input("Enter the location code of "+ips+": "))
-                if ipsloc.is_NWloc() and (mfwloc.srr == ipsloc.srr and mfwloc.rack_noa == ipsloc.rack_noa) and mfwloc != ipsloc:
-                    print("OK")
-                    break
-                elif mfwloc == ipsloc:
-                    print("ERROR: Master "+devicetype+" and IPS cannot take the same slot!\n")
-                elif not (mfwloc.srr == ipsloc.srr and mfwloc.rack_noa == ipsloc.rack_noa):
-                    print("ERROR: Master "+devicetype+" and IPS must be in the same rack\n")
-                else:
-                    print("ERROR: INVALID LOCATION\n")
-            except AttributeError:
-                print("ERROR: SYNTAX INVALID\n")
-    else:
-        ipsloc = ''
-        print("OK no IPS!")
-    return [mfw,speed,mfwloc,sfw,sfwloc,ips,ipsloc]
-
-def getDevices(devicetype):
-    """
-    devicetype must be either 'firewall' or 'loadbalancer.'
-    Prompts to enter SIDs/speed/locations of Stand-alone gear & IPS (w/ their error handlings).
-    Only accepts the devicetype you specify.
-    Returns the provided data as a list for use in main().
-    
-    nwdevice = newtwork device ID (firewall or loadbalancer)
-    speed = 1000 or 100 (int)
-    nwdeviceloc = network device location
-    ips = IPS ID or 'none'
-    """
-    while True:
-        try:
-            nwdevice = NWdevice(input("Enter the "+devicetype+" ID: ").lower().strip())
-            if nwdevice.is_fw_or_lb(devicetype) and nwdevice.is_solo():
-                break
-            else:
-                print("ERROR: SERVICE ID INVALID\n")
-        except AttributeError:
-            print('ERROR: SERVICE ID INVALID\n')
-    while devicetype == 'firewall':
-        try:
-            speed = input('Enter the interface speed (Mbps)[1000]: ').strip() or '1000'
-            if not re.match(r"^10{2,3}$",speed):
-                print('ERROR: DATA INVALID')
-            else:
-                print('OK - speed = '+speed+'Mbps')
-                break
-        except ValueError:
-            print('ERROR: DATA INVALID')
-    speed = speed if devicetype == 'firewall' else '1000'
-    while True:
-        try:
-            nwdeviceloc = Loccode(input("Enter the location code of "+nwdevice+": "))
-            if nwdeviceloc.is_NWloc():
-                if nwdeviceloc.site == nwdevice.site():
-                    break
-                else:
-                    print('ERROR: SITE MISMATCH DETECTED\n')
-            else:
-                print("ERROR: INVALID LOCATION FOR MASTER\n")
-        except AttributeError:
-            print("ERROR: INVALID LOCATION\n")
-    while True:
-        try:
-            ips = input("Enter an IPS ID that monitors the "+devicetype+" segment(s), or type 'none': ").lower().strip().replace("'","")
-
-            if ips == 'none' or NWdevice(ips).is_ips():
-                break
-            else:
-                print('ERROR: INVALID SID FORMAT\n')
-        except AttributeError:
-            print('ERROR: SERVICE ID INVALID\n')
-    if ips != 'none':
-        while True:
-            try:
-                ipsloc = Loccode(input("Enter the location code of "+ips+": "))
-                if ipsloc.is_NWloc() and (nwdeviceloc.srr == ipsloc.srr and nwdeviceloc.rack_noa == ipsloc.rack_noa) and nwdeviceloc != ipsloc:
-                    print("OK")
-                    break
-                elif nwdeviceloc == ipsloc:
-                    print("ERROR: The "+devicetype+" and IPS cannot take the same slot!\n")
-                elif not (nwdeviceloc.srr == ipsloc.srr and nwdeviceloc.rack_noa == ipsloc.rack_noa):
-                    print("ERROR: The "+devicetype+" and IPS must be in the same rack\n")
-                else:
-                    print("ERROR: INVALID LOCATION\n")
-            except AttributeError:
-                print("ERROR: SYNTAX INVALID\n")
-    else:
-        ipsloc = ''
-        print("OK no IPS!")
-    return [nwdevice,speed,nwdeviceloc,ips,ipsloc]
-
-def showSummaryHA(master,masterloc,secondary,secondaryloc,IPS,IPSloc):
-    #from locationcode import Loccode
-    #from networksid import NWdevice
-    if IPS != 'none':
-        Devices = [[master,masterloc],
-                   [secondary,secondaryloc],
-                   [IPS,IPSloc]]
-    else:
-        Devices = [[master,masterloc],
-                   [secondary,secondaryloc]]
-    output = '\n'
-    output += 'The standard front/back switchports of the devices that you entered:\n\n'
-    for sid,loc in Devices:
-        output += sid+' ('+loc+'):\n'
-        output += ' Front: '+loc.findsw()+' '+loc.findfrport()+'\n'
-        output += ' Back:  '+loc.findsw()+' '+loc.findbkport()+'\n\n'
-    print(output)
-
-def showSummary(nwdevice,nwdeviceloc,IPS,IPSloc):
-    if IPS != 'none':
-        Devices = [[nwdevice,nwdeviceloc],
-                   [IPS,IPSloc]]
-    else:
-        Devices = [[nwdevice,nwdeviceloc]]
-    output = '\n'
-    output += 'The standard front/back switchports of the devices that you entered:\n\n'
-    for sid,loc in Devices:
-        output += sid+' ('+loc+'):\n'
-        output += ' Front: '+loc.findsw()+' '+loc.findfrport()+'\n'
-        output += ' Back:  '+loc.findsw()+' '+loc.findbkport()+'\n\n'
-    print(output)
 
 def getVLAN(segment,Vlans):
     while True:
@@ -560,6 +378,125 @@ def makeSVI(username,password,mfwloc,frontVlan,alloccode,frontnets):
         j += 1
         print(sviconfigs)
 
+
+#####THE FOLLOWING FUNCTIONS ARE USED IN HA PROVISIONING SCRIPTS#####
+
+# getHAdevices
+# showSummaryHA
+# backupPortsHA
+
+def getHAdevices(devicetype):
+    """
+    devicetype must be either 'firewall' or 'loadbalancer.'
+    Prompts to enter SIDs/speed/locations of HA pair & IPS (w/ their error handlings).
+    Only accepts the devicetype you specify.
+    Returns the provided data as a list for use in main().
+    
+    mfw = master device ID (firewall or loadbalancer)
+    speed = 1000 or 100 (int)
+    mfwloc = master device location
+    sfw = secondary device ID (firewall or loadbalancer)
+    sfwloc = secondary device location
+    ips = IPS ID or 'none'
+    """
+    #import re
+    #from networksid import NWdevice
+    #from locationcode import Loccode
+    while True:
+        try:
+            mfw = input("Enter the master "+devicetype+" ID: ").lower().strip()
+            if NWdevice(mfw).is_master() and NWdevice(mfw).is_fw_or_lb(devicetype):
+                mfw = NWdevice(mfw)
+                break
+            else:
+                print("ERROR: SERVICE ID INVALID\n")
+        except AttributeError:
+            print('ERROR: SERVICE ID INVALID\n')
+    while devicetype == 'firewall':
+        try:
+            speed = input('Enter the interface speed (Mbps)[1000]: ').strip() or '1000'
+            if not re.match(r"^10{2,3}$",speed):
+                print('ERROR: DATA INVALID')
+            else:
+                print('OK - speed = '+speed+'Mbps')
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID')
+    speed = speed if devicetype == 'firewall' else '1000'
+    while True:
+        try:
+            mfwloc = Loccode(input("Enter the location code of "+mfw+": "))
+            if mfwloc.is_masterloc():
+                if mfwloc.site == mfw.site():
+                    break
+                else:
+                    print('ERROR: SITE MISMATCH DETECTED\n')
+            else:
+                print("ERROR: INVALID LOCATION FOR MASTER\n")
+        except AttributeError:
+            print("ERROR: INVALID LOCATION\n")
+    while True:
+        try:
+            sfw = mfw.peersid()
+            break
+        except UnboundLocalError:
+            print('\nThis case requires you to provide a secondary '+devicetype+' ID manually.')
+            sfw = input('Enter the secondary '+devicetype+' ID: ').lower().strip()
+            if re.match(r"^(netsvc)+(\d{5})$", sfw) and NWdevice(sfw) != mfw:
+                break
+            elif re.match(r"^(netsvc)+(\d{5})$", sfw) and NWdevice(sfw) == mfw:
+                print('ERROR: Master and secondary cannot share the same ID!')
+    sfwloc = mfwloc.peerloc()
+    print('OK')
+    print("The location of secondary "+sfw+" is {0}.".format(sfwloc))
+    while True:
+        try:
+            ips = input("Enter an IPS ID that goes to the master segment, or type 'none': ").lower().strip().replace("'","")
+
+            if ips == 'none' or NWdevice(ips).is_ips():
+                break
+            else:
+                print('ERROR: INVALID SID FORMAT\n')
+        except AttributeError:
+            print('ERROR: SERVICE ID INVALID\n')
+    if ips != 'none':
+        while True:
+            try:
+                ipsloc = Loccode(input("Enter the location code of "+ips+": "))
+                if ipsloc.is_NWloc() and (mfwloc.srr == ipsloc.srr and mfwloc.rack_noa == ipsloc.rack_noa) and mfwloc != ipsloc:
+                    print("OK")
+                    break
+                elif mfwloc == ipsloc:
+                    print("ERROR: Master "+devicetype+" and IPS cannot take the same slot!\n")
+                elif not (mfwloc.srr == ipsloc.srr and mfwloc.rack_noa == ipsloc.rack_noa):
+                    print("ERROR: Master "+devicetype+" and IPS must be in the same rack\n")
+                else:
+                    print("ERROR: INVALID LOCATION\n")
+            except AttributeError:
+                print("ERROR: SYNTAX INVALID\n")
+    else:
+        ipsloc = ''
+        print("OK no IPS!")
+    return [mfw,speed,mfwloc,sfw,sfwloc,ips,ipsloc]
+
+def showSummaryHA(master,masterloc,secondary,secondaryloc,IPS,IPSloc):
+    #from locationcode import Loccode
+    #from networksid import NWdevice
+    if IPS != 'none':
+        Devices = [[master,masterloc],
+                   [secondary,secondaryloc],
+                   [IPS,IPSloc]]
+    else:
+        Devices = [[master,masterloc],
+                   [secondary,secondaryloc]]
+    output = '\n'
+    output += 'The standard front/back switchports of the devices that you entered:\n\n'
+    for sid,loc in Devices:
+        output += sid+' ('+loc+'):\n'
+        output += ' Front: '+loc.findsw()+' '+loc.findfrport()+'\n'
+        output += ' Back:  '+loc.findsw()+' '+loc.findbkport()+'\n\n'
+    print(output)
+
 def backupPortsHA(mfwloc,ipsloc,username,password,Ports,ips):
     # back up port configs
     #import pexpect
@@ -613,6 +550,100 @@ def backupPortsHA(mfwloc,ipsloc,username,password,Ports,ips):
                 print('    sh run int '+ipsloc.findfrport())
                 print('    sh run int '+ipsloc.findbkport())
             print()
+
+#####THE FOLLOWING FUNCTIONS ARE USED IN NON-HA PROVISIONING SCRIPTS#####
+
+# getDevices
+# showSummary
+# backupPorts
+
+def getDevices(devicetype):
+    """
+    devicetype must be either 'firewall' or 'loadbalancer.'
+    Prompts to enter SIDs/speed/locations of Stand-alone gear & IPS (w/ their error handlings).
+    Only accepts the devicetype you specify.
+    Returns the provided data as a list for use in main().
+    
+    nwdevice = newtwork device ID (firewall or loadbalancer)
+    speed = 1000 or 100 (int)
+    nwdeviceloc = network device location
+    ips = IPS ID or 'none'
+    """
+    while True:
+        try:
+            nwdevice = NWdevice(input("Enter the "+devicetype+" ID: ").lower().strip())
+            if nwdevice.is_fw_or_lb(devicetype) and nwdevice.is_solo():
+                break
+            else:
+                print("ERROR: SERVICE ID INVALID\n")
+        except AttributeError:
+            print('ERROR: SERVICE ID INVALID\n')
+    while devicetype == 'firewall':
+        try:
+            speed = input('Enter the interface speed (Mbps)[1000]: ').strip() or '1000'
+            if not re.match(r"^10{2,3}$",speed):
+                print('ERROR: DATA INVALID')
+            else:
+                print('OK - speed = '+speed+'Mbps')
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID')
+    speed = speed if devicetype == 'firewall' else '1000'
+    while True:
+        try:
+            nwdeviceloc = Loccode(input("Enter the location code of "+nwdevice+": "))
+            if nwdeviceloc.is_NWloc():
+                if nwdeviceloc.site == nwdevice.site():
+                    break
+                else:
+                    print('ERROR: SITE MISMATCH DETECTED\n')
+            else:
+                print("ERROR: INVALID LOCATION FOR MASTER\n")
+        except AttributeError:
+            print("ERROR: INVALID LOCATION\n")
+    while True:
+        try:
+            ips = input("Enter an IPS ID that monitors the "+devicetype+" segment(s), or type 'none': ").lower().strip().replace("'","")
+
+            if ips == 'none' or NWdevice(ips).is_ips():
+                break
+            else:
+                print('ERROR: INVALID SID FORMAT\n')
+        except AttributeError:
+            print('ERROR: SERVICE ID INVALID\n')
+    if ips != 'none':
+        while True:
+            try:
+                ipsloc = Loccode(input("Enter the location code of "+ips+": "))
+                if ipsloc.is_NWloc() and (nwdeviceloc.srr == ipsloc.srr and nwdeviceloc.rack_noa == ipsloc.rack_noa) and nwdeviceloc != ipsloc:
+                    print("OK")
+                    break
+                elif nwdeviceloc == ipsloc:
+                    print("ERROR: The "+devicetype+" and IPS cannot take the same slot!\n")
+                elif not (nwdeviceloc.srr == ipsloc.srr and nwdeviceloc.rack_noa == ipsloc.rack_noa):
+                    print("ERROR: The "+devicetype+" and IPS must be in the same rack\n")
+                else:
+                    print("ERROR: INVALID LOCATION\n")
+            except AttributeError:
+                print("ERROR: SYNTAX INVALID\n")
+    else:
+        ipsloc = ''
+        print("OK no IPS!")
+    return [nwdevice,speed,nwdeviceloc,ips,ipsloc]
+
+def showSummary(nwdevice,nwdeviceloc,IPS,IPSloc):
+    if IPS != 'none':
+        Devices = [[nwdevice,nwdeviceloc],
+                   [IPS,IPSloc]]
+    else:
+        Devices = [[nwdevice,nwdeviceloc]]
+    output = '\n'
+    output += 'The standard front/back switchports of the devices that you entered:\n\n'
+    for sid,loc in Devices:
+        output += sid+' ('+loc+'):\n'
+        output += ' Front: '+loc.findsw()+' '+loc.findfrport()+'\n'
+        output += ' Back:  '+loc.findsw()+' '+loc.findbkport()+'\n\n'
+    print(output)
 
 def backupPorts(mfwloc,ipsloc,username,password,Ports,ips):
     # back up port configs
@@ -677,5 +708,201 @@ def backupPorts(mfwloc,ipsloc,username,password,Ports,ips):
             print('    sh run int '+ipsloc.findfrport())
             print('    sh run int '+ipsloc.findbkport())
             print()
+
+#####THE FOLLOWING FUNCTIONS ARE USED IN IPS-ONLY PROVISIONING SCRIPT#####
+
+# getIPS
+# getIPSmgtInfo
+# getNWdevice
+# getItf_and_port
+# showIPSCabling
+
+def getIPS():
+    """
+    Prompts to enter SID/location of IPS.
+    """
+    while True:
+        try:
+            ips = input("Enter the IPS ID: ").lower().strip()
+            if NWdevice(ips).is_ips():
+                ips = NWdevice(ips)
+                break
+            else:
+                print("ERROR: SERVICE ID INVALID\n")
+        except AttributeError:
+            print('ERROR: SERVICE ID INVALID\n')
+    while True:
+        try:
+            ipsloc = Loccode(input("Enter the location code of "+ips+": "))
+            if ipsloc.is_NWloc():
+                break
+            else:
+                print("ERROR: INVALID LOCATION\n")
+        except AttributeError:
+            print("ERROR: INVALID LOCATION\n")
+    return [ips,ipsloc]
+
+def getIPSmgtInfo():
+    """
+    Prompts to enter IPS mgmt VLAN, depth, and IP.
+    """
+    # IPS mgt VLAN
+    while True:
+        try:
+            ipsVlan = int(input('Enter the VLAN ID of IPS mgmt: '))
+            if ipsVlan <= 0 or 4096 < ipsVlan:
+                print('ERROR: DATA INVALID\n')
+            else:
+                print('OK')
+                break
+        except (ValueError, IndexError):
+            print('ERROR: DATA INVALID\n')
+    # IPS mgt depth
+    while True:
+        try:
+            depth = input('\nEnter the depth code of the segment [0101]: ').strip() or '0101'
+            if not re.match(r"^0\d{3}$",depth):
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID\n')
+    # IPS mgt IP
+    ipsmgtIPaddr = getInterfaceIP('management interface')
+    return [ipsVlan,depth,ipsmgtIPaddr]
+
+def getNWdevice(number,ipsloc):
+    """
+    Prompts to enter SIDs/speed/locations of a network device.
+    nwdevice = newtwork device ID (firewall or loadbalancer)
+    speed = 1000 or 100 (int)
+    nwdeviceloc = network device location
+    number: monitored device number (1 or 2) - used only in prompt messages
+    """
+
+    def __sidlocMISmatch(nwdevice,deviceloc):
+        """
+        Helper Boolean that warns an invalid SID-LOCATION combination.
+        Returns True if MISmatch is found.
+        """
+        return (nwdevice.is_master() and not deviceloc.is_masterloc()) or (nwdevice.is_secondary() and deviceloc.is_masterloc())
+
+    # Service ID
+    while True:
+        try:
+            nwdevice = input("Enter the service ID of a monitored device #"+str(number)+": ").lower().strip()
+            if NWdevice(nwdevice).is_fw() or NWdevice(nwdevice).is_lb():
+                nwdevice = NWdevice(nwdevice)
+                break
+            else:
+                print("ERROR: SERVICE ID INVALID\n")
+        except AttributeError:
+            print('ERROR: SERVICE ID INVALID\n')
+    # Speed
+    while True:
+        try:
+            speed = input('Enter the interface speed (Mbps)[1000]: ').strip() or '1000'
+            if not re.match(r"^10{2,3}$",speed):
+                print('ERROR: DATA INVALID')
+            else:
+                print('OK - speed = '+speed+'Mbps')
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID')
+    # Location
+    while True:
+        try:
+            nwdeviceloc = Loccode(input("Enter the location code of "+nwdevice+": "))
+            if nwdeviceloc.is_NWloc() and nwdeviceloc.srr == ipsloc.srr and nwdeviceloc.rack_noa == ipsloc.rack_noa and nwdeviceloc != ipsloc:
+                if __sidlocMISmatch(nwdevice,nwdeviceloc):
+                    print('ERROR: ROLE MISMATCH DETECTED!\n')
+                else:
+                    print("OK")
+                    break
+            elif nwdeviceloc == ipsloc:
+                print("ERROR: The "+nwdevice+" and IPS cannot take the same slot!\n")
+            elif not (nwdeviceloc.srr == ipsloc.srr and nwdeviceloc.rack_noa == ipsloc.rack_noa):
+                print("ERROR: The "+nwdevice+" and IPS must be in the same rack\n")
+            else:
+                print("ERROR: INVALID LOCATION\n")
+        except AttributeError:
+            print("ERROR: SYNTAX INVALID\n")
+    return [nwdevice,speed,nwdeviceloc]
+
+def getItf_and_port(nwdevice,nwdeviceloc):
+    """
+    Prompts to provide:
+    
+    1. Segment name that IPS monitors (segmentName)
+    2. Device-side interface (deviceitf)
+    3. Agg.switch-side switchport (swport)
+    4. Also extracts the port number of the Agg.switch linecard (pnum)
+    """
+    # Segment Name
+    segmentName = ''
+    while segmentName == '':
+        segmentName = input('Enter the name of the '+nwdevice+'-connected segment to monitor (e.g., DMZ): ').strip()
+
+    # deviceitf
+    while True:
+        try:
+            deviceitf = input('Enter the '+nwdevice+'-side INTERFACE to monitor (e.g., eth2): ').lower().strip()
+            if not deviceitf in devicePorts(nwdevice):
+                print('ERROR: INVALID DATA\n')
+            else:
+                break
+        except ValueError:
+            print('ERROR: INVALID DATA\n')
+
+    # swport & pnum
+    if devicePorts(nwdevice).index(deviceitf) == 1:
+        swport = nwdeviceloc.findbkport()
+        pnum = re.match(r"^gi(5|6)/(\d{2})$",swport).group(2)
+    else:
+        while True:
+            try:
+                swport = input('Enter the '+nwdeviceloc.findsw()+'-side switchport to monitor (e.g., gi5/33): ').lower().strip()
+                mod = re.match(r"^gi(5|6)/(\d{2})$",swport).group(1)
+                pnum = re.match(r"^gi(5|6)/(\d{2})$",swport).group(2)
+                if 33 <= int(pnum) and int(pnum) <= 48 and nwdeviceloc.findmod() == mod:
+                    break
+                elif not (33 <= int(pnum) and int(pnum) <= 48):
+                    print('ERROR: PORT NUMBER OUT OF RANGE\n')
+                else:
+                    print('ERROR: SWITCH MODULE NUMBER MISTMATCH FOUND\n')
+            except (ValueError, AttributeError):
+                print('ERROR: INVALID DATA\n')
+
+    return [segmentName,deviceitf,swport,pnum]
+
+def showIPSCabling(ips,nwdevice,nwdeviceloc,segmentName,deviceitf,pnum,monnum):
+    """
+    monnum is either 1 or 2:
+    
+    if monnum == 1:
+        IPS 1A/1B ports are used.
+    if monnum ==2:
+        IPS 2C/2D ports are used.
+    """
+    # cabling instructions
+    site = nwdeviceloc.site
+    if nwdeviceloc.is_masterloc(): 
+        updown = 'UPPER'   
+        if site == 'iad':
+            bk = '50'
+        else:
+            bk = '43'
+    else:
+        updown = 'LOWER'
+        if site == 'iad':
+            bk = '49'
+        else:
+            bk = '42'
+    [to_nwdevice, to_switch] = ['1A','1B'] if monnum == 1 else ['2C','2D']
+
+    cabling = segmentName+':\n'
+    cabling += '  '+nwdevice+' '+deviceitf+' -> GREEN XOVER -> '+ips+' port '+to_nwdevice+'\n'
+    cabling += '  '+ips+' port '+to_switch+' -> GREEN STRAIGHT -> U'+bk+' '+updown+' ORANGE PANEL p'+pnum+'\n'
+    print(cabling)
 
 

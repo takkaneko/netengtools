@@ -14,9 +14,8 @@ from resources import pickPort
 from resources import getInterfaceIP
 from resources import devicePorts
 from resources import makeSVI
-
 from resources import getDevices
-from resources import showSummary # was showSummarySA
+from resources import showSummary
 from resources import backupPorts
 
 def main():
