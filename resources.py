@@ -248,6 +248,8 @@ def devicePorts(sid):
                      's1p1','s1p2','s1p3','s1p4',
                      's2p1','s2p2','s2p3','s2p4'] 
     UTM130Ports = ['EXT(5)','INT(1)','LAN1(2)','LAN2(3)','DMZ(4)']
+    nokia12000Ports = ['eth1','eth2','eth3','eth4','eth5','eth6','eth7','eth8',
+                       's1p1','s1p2','s1p3','s1p4','s1p5','s1p6','s1p7','s1p8']
     nokia4400Ports = ['eth1','eth2','eth3','eth4','eth5','eth6','eth7','eth8']
     nokia2200Ports = ['eth1','eth2','eth3','eth4','eth5','eth6']
     alteonPorts = ['p1','p2','p3','p4','p5','p7','p8']
@@ -268,6 +270,8 @@ def devicePorts(sid):
         return nokia2200Ports
     elif sid.model in ['nokia39','nokia56']:
         return nokia3XXPorts
+    elif sid.model == 'chkp120':
+        return nokia12000Ports
     else:
         return genericPorts
 
@@ -284,7 +288,7 @@ def defaultsync(sid):
         return 'gi0/5'
     elif sid.model == 'alteon':
         return 'none'
-    elif sid.model == 'chkp40':
+    elif sid.model in ['chkp40','chkp120']:
         return 'eth8'
     elif sid.model in ['chkp20','nokia29']:
         return 'eth6'

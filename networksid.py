@@ -54,9 +54,9 @@ class NWdevice(str):
     False
     """
     def __init__(self,sid):
-        p1 = re.compile(r"^(nokia39|nokia56|chkp40|chkp20|alteon|asa10|asa25|asa50|asa85)+(ham|has)+(fw|slb)+(\d{5})$", re.IGNORECASE) # HA master/standby fw/lb
+        p1 = re.compile(r"^(nokia39|nokia56|chkp40|chkp20|chkp120|alteon|asa10|asa25|asa50|asa85)+(ham|has)+(fw|slb)+(\d{5})$", re.IGNORECASE) # HA master/standby fw/lb
         p2 = re.compile(r"^(netsvc)+(\d{5})$", re.IGNORECASE) # Generic HA or non-HA network device
-        p3 = re.compile(r"^(nokia39|nokia56|nokia29|chkp13|chkp20|chkp40|alteon|asa10)+(fw|slb)+(\d{5})$", re.IGNORECASE) # Stand-alone fw/lb
+        p3 = re.compile(r"^(nokia39|nokia56|nokia29|chkp13|chkp20|chkp40|chkp120|alteon|asa10)+(fw|slb)+(\d{5})$", re.IGNORECASE) # Stand-alone fw/lb
         p4 = re.compile(r"^(fw)+(\d{5})$", re.IGNORECASE) # Unknown model firewall (Not common)
         p5 = re.compile(r"^(prgx4|prgx5|prvg100)+(aips)+(\d{5})$", re.IGNORECASE) # IPS
         p6 = re.compile(r"^(netsvc)+(ham|has)+(\d{5})$", re.IGNORECASE) # Generic HA master/secondary network device
@@ -108,7 +108,7 @@ class NWdevice(str):
         """
         Returns 'cisco' or 'nokia'
         """
-        if self.model in ['nokia39','nokia56','chkp40','chkp20','chkp13']:
+        if self.model in ['nokia39','nokia56','chkp40','chkp20','chkp120','chkp13']:
             return 'nokia'
         elif self.model in ['asa10','asa25','asa50','asa85']:
             return 'cisco'
@@ -163,7 +163,7 @@ class NWdevice(str):
         """
         Returns an HA peer's service ID.
         """
-        if re.match(r"^(nokia39|nokia56|chkp40|chkp20|alteon|asa10|asa25|asa50|asa85)+(ham|has)+(fw|slb)+(\d{5})$",self):
+        if re.match(r"^(nokia39|nokia56|chkp40|chkp20|chkp120|alteon|asa10|asa25|asa50|asa85)+(ham|has)+(fw|slb)+(\d{5})$",self):
             if self.role == 'ham':
                 peer = self.model + 'has' + self.type + self.digits
             elif self.role == 'has':
