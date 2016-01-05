@@ -370,7 +370,7 @@ def makeSVI(username,password,mfwloc,frontVlan,alloccode,frontnets):
         sviconfigs += ' no ip unreachables\n'
         sviconfigs += ' no ip proxy-arp\n'
         sviconfigs += ' ip ospf network non-broadcast\n'
-        sviconfigs += ' load-interval 30'
+        sviconfigs += ' load-interval 30\n'
         sviconfigs += ' standby 100 ip '+str(frontnets[0][1])+'\n'
         sviconfigs += ' standby 100 priority '+str(45-j*10)+'\n'
         sviconfigs += ' standby 100 preempt delay minimum 10\n'
