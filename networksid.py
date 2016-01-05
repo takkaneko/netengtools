@@ -3,12 +3,13 @@
 
 import re
 
-# HA FW/LB SIDs:
+# EXAMPLES - HA FW/LB SIDs:
 
 # netsvc20043 - two different 'netsvcXXXXX' devices *could* form an HA pair
 # netsvcham10060
 # chkp20hamfw12345
 # chkp40hamfw12345
+# chkp120hamfw12345
 # nokia39hamfw10093
 # alteonhamslb10317
 # nokia56hamfw20002
@@ -18,7 +19,7 @@ import re
 # asa85hamfw10001
 # pixhamfw10027 - unsupported
 
-# Stand-alone FW/LB SIDs:
+# EXAMPLES - Stand-alone FW/LB SIDs:
 
 # nokia39fw20018
 # nokia39fw10004
@@ -31,11 +32,20 @@ import re
 # asa10fw10001
 # pixfw16006
 
-# IPS SIDs:
+# EXAMPLES - IPS SIDs:
 
 # prgx4aips10011
 # prgx5aips20001
 # prvg100aips10007
+
+#####NOTE#####
+# Every time it becomes necessary to support a new platform (and therefore a new service ID prefix),
+# be sure to update the definition of the NWdevice class as well as the following functions in resources.py:
+
+# devicePorts
+# defaultsync
+
+##############
 
 class NWdevice(str):
     """
