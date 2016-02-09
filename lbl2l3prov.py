@@ -266,7 +266,7 @@ def main():
             cabling += '  '+mfw+' '+availPorts[auxII]+' -> GREEN STRAIGHT -> U'+bk+' '+updown+' ORANGE PANEL p'+str(Ports[auxII])+'\n\n'
         auxII += 1
     print(cabling)
-    input('Hit Enter to view the firewall allocation form')
+    input('Hit Enter to view the loadbalancer allocation form')
     print()
     # LB allocation form
     if mfw.is_fw():
@@ -366,7 +366,7 @@ def main():
             ipsform += '          speed/dup: '+speed+'M/Full\n'
             ipsform += '         cable type: XOVER\n\n'
             ipsform += 'IPS inline port 1B\n\n'
-            ipsform += '      connection to: '+ipsloc.findsw()+'\n'
+            ipsform += '      connection to: '+mfwloc.findsw()+'\n'
             ipsform += '               port: '+mfwloc.findbkport()+' ('+mfwloc+' green)\n'
             ipsform += '          speed/dup: '+speed+'M/Full\n'
             ipsform += '         cable type: straight-thru \n\n'
@@ -379,8 +379,8 @@ def main():
                     ipsform += '          speed/dup: '+speed+'M/Full\n'
                     ipsform += '         cable type: XOVER\n\n'
                     ipsform += 'IPS inline port 2D\n\n'
-                    ipsform += '      connection to: '+ipsloc.findsw()+'\n'
-                    ipsform += '               port: gi'+ipsloc.findmod()+'/'+str(Ports[auxIV])+'\n'
+                    ipsform += '      connection to: '+mfwloc.findsw()+'\n'
+                    ipsform += '               port: gi'+mfwloc.findmod()+'/'+str(Ports[auxIV])+'\n'
                     ipsform += '          speed/dup: '+speed+'M/Full\n'
                     ipsform += '         cable type: straight-thru\n\n'
                     auxIV += 1
@@ -397,8 +397,8 @@ def main():
                     ipsform += '          speed/dup: '+speed+'M/Full\n'
                     ipsform += '         cable type: XOVER\n\n'
                     ipsform += 'IPS inline port '+('1B' if auxV == 0 else '2D')+'\n\n'
-                    ipsform += '      connection to: '+ipsloc.findsw()+'\n'
-                    ipsform += '               port: gi'+ipsloc.findmod()+'/'+str(Ports[auxVI])+'\n'
+                    ipsform += '      connection to: '+mfwloc.findsw()+'\n'
+                    ipsform += '               port: gi'+mfwloc.findmod()+'/'+str(Ports[auxVI])+'\n'
                     ipsform += '          speed/dup: '+speed+'M/Full\n'
                     ipsform += '         cable type: straight-thru\n\n'
                     auxV += 1
