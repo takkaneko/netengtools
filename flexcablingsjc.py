@@ -177,7 +177,6 @@ def main():
             child.expect('Password: ',timeout=3)
             child.sendline(password)
             child.expect('6513-'+switch+'-(sec-)*c\d{1,2}#',timeout=3)
-            print(switch+':\n')
             child.sendline('term len 55')
             child.expect('6513-'+switch+'-(sec-)*c\d{1,2}#',timeout=3)
             child.sendline('sh int status mod 4 | beg Gi4/26')
@@ -248,7 +247,7 @@ def main():
     # Case II: Dual cabling type (hbeat, vmotion, pri+, sec+, or otherha).
     
     else:
-        port1 = input('Choose the '+SW1+' module 4 SWITCHPORT number to use this time: ').strip()
+        port1 = input('Choose the '+SW1+' module 4 SWITCHPORT number to use this time (1 - 48): ').strip()
         if symmetric == 'n':
             port2 = input('Choose the '+SW2+' port number: ').strip()
         else:
