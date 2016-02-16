@@ -25,10 +25,10 @@ def main():
     password = getpass.getpass(prompt='Enter your tacacs password: ',stream=None)
     alloc = input('Enter an allocation/depth codes (e.g, "nttages-9902"): ').strip().lower()
     sid = input('Enter a server ID: ').strip().lower()
-    if sid[0] == 'w':
+    if sid[0] == 'w' or sid[0:3] == 'itw' or sid[0:3] == 'isw':
         os = 'windows'
         negotiate = 'n'
-    elif sid[0] == 'l':
+    elif sid[0] == 'l' or sid[0:3] == 'itl' or sid[0:3] == 'isl':
         os = 'linux'
         negotiate = 'y'
     elif sid[0] == 's':
@@ -39,7 +39,7 @@ def main():
     if os == 'other':
         negotiate = input('Auto negotiate [y/n]?: ').strip().lower()
     if negotiate == 'n':
-        speed = input('Speed (1000/100)?: ').strip()
+        speed = input('Speed (1000/100)[1000]?: ').strip() or '1000'
         duplex = 'duplex full'
     else:
         speed = 'auto'
@@ -145,7 +145,7 @@ def main():
         SW1 = SWs1
         SW2 = SWs2
     print()
-    input('Hit Enter to check outputs of switchport statuses on '+sw_pair+':')
+    input('Hit Enter to check the switchport statuses on '+sw_pair+':')
     print()
     for switch in [SW1,SW2]:
         try:
@@ -155,11 +155,12 @@ def main():
             child.expect('Password: ',timeout=3)
             child.sendline(password)
             child.expect('6513-'+switch+'-(sec-)*c\d{1,2}#',timeout=3)
+            print('====================================')
             print(switch+':\n')
             child.sendline('term len 55')
             child.expect('6513-'+switch+'-(sec-)*c\d{1,2}#',timeout=3)
             child.sendline('sh int status mod 4')
-            child.expect('Gi4/26',timeout=3)
+            child.expect('Gi4/25',timeout=3)
             print(child.before)
             child.sendline('exit')
         except (EOF,TIMEOUT,ExceptionPexpect):
@@ -179,7 +180,7 @@ def main():
             child.expect('6513-'+switch+'-(sec-)*c\d{1,2}#',timeout=3)
             child.sendline('term len 55')
             child.expect('6513-'+switch+'-(sec-)*c\d{1,2}#',timeout=3)
-            child.sendline('sh int status mod 4 | beg Gi4/26')
+            child.sendline('sh int status mod 4 | beg Gi4/25')
             child.expect('6513-'+switch+'-(sec-)*c\d{1,2}#',timeout=3)
             print(child.before)
             child.sendline('exit')
@@ -195,19 +196,19 @@ def main():
     
     if type == 'ilo' or type == 'other':
         use_this_switch = input('Choose '+SW1+' or '+SW2+' to use this time: ').strip().lower()
-        port = input('Choose '+use_this_switch+' module 4 SWITCHPORT number to use this time: ').strip()
-        flexpt_range = '1 - 12' if use_this_switch == priSW or use_this_switch == secSW else '25 - 36'
-        idf_num = '2' if use_this_switch == priSW or use_this_switch == secSW else '23'
+        port = input('Choose '+use_this_switch+' module 4 SWITCHPORT number to use this time (1 - 48): ').strip()
+        flexpt_range = '1 - 12' if use_this_switch == SW1 else '25 - 36'
+        idf_num = '2' if use_this_switch == SW1 else '23'
         flexport = input('Select an available FLEX port in the server rack ('+flexpt_range+'): ').strip()
-        flxpt_base = flexport%24
-        if loc.rack == 4 or loc.rack == 9 or loc.rack == 13 or loc.rack == 17:
-            idf_port = flxpt_base
-        elif loc.rack == 5 or loc.rack == 10 or loc.rack == 14 or loc.rack == 18:
-            idf_port = flxpt_base + 12
-        elif loc.rack == 6 or loc.rack == 11 or loc.rack == 15 or loc.rack == 20:
-            idf_port = flxpt_base + 24
-        else: # if loc.rack == 8 or loc.rack == 12 or loc.rack == 16 or loc.rack == 21:
-            idf_port = flxpt_base + 36
+        flxpt_base = int(flexport)%24
+        if loc.rack == '4' or loc.rack == '9' or loc.rack == '13' or loc.rack == '17':
+            idf_port = str(flxpt_base)
+        elif loc.rack == '5' or loc.rack == '10' or loc.rack == '14' or loc.rack == '18':
+            idf_port = str(flxpt_base + 12)
+        elif loc.rack == '6' or loc.rack == '11' or loc.rack == '15' or loc.rack == '20':
+            idf_port = str(flxpt_base + 24)
+        else: # if loc.rack == '8' or loc.rack == '12' or loc.rack == '16' or loc.rack == '21':
+            idf_port = str(flxpt_base + 36)
         print()
         print('*******************')
         print('CABLING INSTUCTIONS')
