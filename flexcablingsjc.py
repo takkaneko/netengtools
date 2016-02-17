@@ -21,32 +21,77 @@ def main():
             sw = 'iad4'
         return sw+loc.row.zfill(2)
     import getpass
-    username = input('Enter your tacacs username: ').strip().lower()
-    password = getpass.getpass(prompt='Enter your tacacs password: ',stream=None)
-    alloc = input('Enter an allocation/depth codes (e.g, "nttages-9902"): ').strip().lower()
-    sid = input('Enter a server ID: ').strip().lower()
+    username = ''
+    while username == '':
+        username = input('Enter your tacacs username: ').strip().lower()
+    password = ''
+    while password == '':
+        password = getpass.getpass(prompt='Enter your tacacs password: ',stream=None).strip()
+    while True:
+        try:
+            alloc = input('Enter an allocation/depth codes (e.g, "nttages-9902"): ').strip().lower()
+            if not re.match(r"\w+-\d{4}",alloc):
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID\n')
+    
+    while True:
+        try:
+            sid = input('Enter a server ID: ').strip().lower()
+            if not re.match(r"^[a-z]+\d{5}$",sid):
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID\n')
     if sid[0] == 'w' or sid[0:3] == 'itw' or sid[0:3] == 'isw':
         os = 'windows'
         negotiate = 'n'
     elif sid[0] == 'l' or sid[0:3] == 'itl' or sid[0:3] == 'isl':
         os = 'linux'
         negotiate = 'y'
-    elif sid[0] == 's':
+    elif sid[0:3] == 'sun':
         os = 'sun'
         negotiate = 'n'
     else:
         os = 'other'
     if os == 'other':
-        negotiate = input('Auto negotiate [y/n]?: ').strip().lower()
+        while True:
+            try:
+                negotiate = input('Auto negotiate [y/n]?: ').strip().lower()[0]
+                if not negotiate == 'y' and not negotiate == 'n':
+                    print('ERROR: DATA INVALID')
+                else:
+                    break
+            except (ValueError,IndexError):
+                print('ERROR: DATA INVALID')
     if negotiate == 'n':
-        speed = input('Speed (1000/100)[1000]?: ').strip() or '1000'
+        while True:
+            try:
+                speed = input('Speed (1000/100)[1000]?: ').strip() or '1000'
+                if not re.match(r"^10{2,3}$",speed):
+                    print('ERROR: DATA INVALID')
+                else:
+                    break
+            except ValueError:
+                print('ERROR: DATA INVALID')
         duplex = 'duplex full'
     else:
         speed = 'auto'
         duplex = 'no duplex'
     spd = '100' if speed == '100' else '1000'
-    loc = input('Enter a location code: ').strip().lower()
-    loc = Loccode(loc)
+    while True:
+        try:
+            loc = input('Enter a location code: ').strip().lower()
+            loc = Loccode(loc)
+            if not int(loc.rack) in [4,5,6,8,9,10,11,12,13,14,15,16,17,18,20,21]:
+                print("ERROR: INVALID LOCATION\n")
+            else:
+                break
+        except AttributeError:
+            print("ERROR: INVALID LOCATION\n")
     if 4 <= int(loc.rack) <= 8:
         u_num = '5'
     elif 9 <= int(loc.rack) <= 12:
@@ -70,7 +115,15 @@ def main():
     secSW = SWs1 if trace == 'straight' else SWs2
     se2SW = SWs2 if trace == 'straight' else SWs1
     #iloSW = SWs1 if int(loc.rack) <= 12 else SWs2 #iloSW not needed in this tool
-    vlan = int(input('Enter a VLAN ID: '))
+    while True:
+        try:
+            vlan = int(input('Enter a VLAN ID: '))
+            if vlan <= 0 or 4096 < vlan:
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID\n')
     print('Now please specify the cabling type. Available types are:')
     print()
     print('    hbeat: Heartbeat (HA)')
