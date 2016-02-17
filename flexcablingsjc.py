@@ -88,6 +88,12 @@ def main():
             loc = Loccode(loc)
             if not int(loc.rack) in [4,5,6,8,9,10,11,12,13,14,15,16,17,18,20,21]:
                 print("ERROR: INVALID LOCATION\n")
+            elif not 1<=int(loc.slot)<=12:
+                print("ERROR: INVALID LOCATION\n")
+            elif not loc.sr in ['sjc.c10','sjc.c4','sjc.c9']:
+                print("ERROR: INVALID LOCATION\n")
+            elif not int(loc.row) in [1,2,3,4]:
+                print("ERROR: INVALID LOCATION\n")
             else:
                 break
         except AttributeError:
@@ -133,25 +139,41 @@ def main():
     print('      ilo: Routable ilo (Non-HA)')
     print('  otherha: Other (HA)')
     print('    other: Other (Non-HA)')
-    type = input('Cable type of your choice: ').strip().lower()
+    while True:
+        try:
+            type = input('Cable type of your choice: ').strip().lower()
+            if not type in ['hbeat','vmotion','pri+','sec+','ilo','otherha','other']:
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except (ValueError,IndexError):
+            print('ERROR: DATA INVALID\n')
     # dual...determines if the cabling is HA or not. 
-    # symmetric...an optional attribute that is only relevant when the cabling is HA.
     # custom_type...need to name the otherha/other cabling.
     # pri_or_sec...automatically set when obvious. manually claim one when the type is otherha/other.
-    if type == 'hbeat' or type == 'vmotion' or type == 'pri+' or type == 'sec+' or type == 'otherha':
+    if type in ['hbeat','vmotion','pri+','sec+','otherha']:
         dual = 'y'
     else:
         dual = 'n'
-    if dual == 'y':
-        symmetric = input('Symmetric cabling? [Y/n]: ').strip().lower()
-    if type == 'otherha' or type == 'other':
-        custom_type = input('Name this cabling type (eg, "DMZ2", "sec3". etc.): ').strip().title()
-        pri_or_sec = input('Should this use primarynet or secnet? [pri/sec]: ').strip().lower()
-    elif type == 'hbeat' or type == 'vmotion' or type == 'pri+' or type == 'ilo':
-        custom_type = ''
+
+    if type in ['otherha','other']:
+        custom_type == ''
+        while custom_type == '':
+            custom_type = input('Name this cabling type (eg, "DMZ2", "sec3". etc.): ').strip().title()
+        while True:
+            try:
+                pri_or_sec = input('Should this use primarynet or secnet? [pri/sec]: ').strip().lower()
+                if not pri_or_sec in ['pri','sec']:
+                    print('ERROR: DATA INVALID\n')
+                else:
+                    break
+            except (ValueError,IndexError):
+                print('ERROR: DATA INVALID\n')
+    elif type in ['hbeat','vmotion','pri+','ilo']:
+        custom_type = 'n/a'
         pri_or_sec = 'pri'
     else: # if type == 'sec+'
-        custom_type = ''
+        custom_type = 'n/a'
         pri_or_sec = 'sec'
     typeDict = {'hbeat': ('Heartbeat','hbt','hb2'),
           'vmotion': ('Vmotion','vmo','vm2'),
@@ -174,8 +196,6 @@ def main():
     print('       Sec2 Switch: '+se2SW)
     print('              VLAN: '+str(vlan))
     print('      Cabling Type: '+type+' (Dual cabling = '+dual+')')
-    if dual == 'y':
-        print(' Symmetric cabling: '+symmetric)
     if type ==  'otherha' or 'other':
         print('Custom cabling name: '+custom_type)
         print('       Used network: '+pri_or_sec)
@@ -247,20 +267,45 @@ def main():
 
     # Case I: Single cabling type (ilo or other).
     
-    if type == 'ilo' or type == 'other':
-        use_this_switch = input('Choose '+SW1+' or '+SW2+' to use this time: ').strip().lower()
-        port = input('Choose '+use_this_switch+' module 4 SWITCHPORT number to use this time (1 - 48): ').strip()
+    if dual == 'n':
+        while True:
+            try:
+                use_this_switch = input('Choose '+SW1+' or '+SW2+' to use this time: ').strip().lower()
+                if not use_this_switch in [SW1,SW2]:
+                    print('ERROR: DATA INVALID\n')
+                else:
+                    break
+            except (ValueError,IndexError):
+                print('ERROR: DATA INVALID\n')
+        while True:
+            try:
+                port = input('Choose '+use_this_switch+' module 4 SWITCHPORT number to use this time (1 - 48): ').strip()
+                if not 1<=int(port)<=48:
+                    print('ERROR: DATA INVALID\n')
+                else:
+                    break
+            except ValueError:
+                print('ERROR: DATA INVALID\n')
         flexpt_range = '1 - 12' if use_this_switch == SW1 else '25 - 36'
+        flexpt_range_real = [i for i in range(1,13)] if use_this_switch == SW1 else [i for i in range(25,37)]
         idf_num = '2' if use_this_switch == SW1 else '23'
-        flexport = input('Select an available FLEX port in the server rack ('+flexpt_range+'): ').strip()
+        while True:
+            try:
+                flexport = input('Select an available FLEX port in the server rack ('+flexpt_range+'): ').strip()
+                if not int(flexport) in flexpt_range_real:
+                    print('ERROR: DATA INVALID\n')
+                else:
+                    break
+            except (ValueError,IndexError):
+                print('ERROR: DATA INVALID\n')
         flxpt_base = int(flexport)%24
-        if loc.rack == '4' or loc.rack == '9' or loc.rack == '13' or loc.rack == '17':
+        if loc.rack in ['4','9','13','17']:
             idf_port = str(flxpt_base)
-        elif loc.rack == '5' or loc.rack == '10' or loc.rack == '14' or loc.rack == '18':
+        elif loc.rack in ['5','10','14','18']:
             idf_port = str(flxpt_base + 12)
-        elif loc.rack == '6' or loc.rack == '11' or loc.rack == '15' or loc.rack == '20':
+        elif loc.rack in ['6','11','15','20']:
             idf_port = str(flxpt_base + 24)
-        else: # if loc.rack == '8' or loc.rack == '12' or loc.rack == '16' or loc.rack == '21':
+        else: # if loc.rack in ['8','12','16','21']:
             idf_port = str(flxpt_base + 36)
         print()
         print('*******************')
@@ -301,28 +346,77 @@ def main():
     # Case II: Dual cabling type (hbeat, vmotion, pri+, sec+, or otherha).
     
     else:
-        port1 = input('Choose the '+SW1+' module 4 SWITCHPORT number to use this time (1 - 48): ').strip()
+        while True:
+            try:
+                symmetric = input('Symmetric cabling (switchports)? [Y/n]: ').strip().lower()[0]
+                if not symmetric in ['y','n']:
+                    print('ERROR: DATA INVALID\n')
+                else:
+                    break
+            except (ValueError,IndexError):
+                print('ERROR: DATA INVALID\n')
+        while True:
+            try:
+                port1 = input('Choose the '+SW1+' module 4 SWITCHPORT number to use this time (1 - 48): ').strip()
+                if not int(port1) in [i for i in range(1,49)]:
+                    print('ERROR: DATA INVALID\n')
+                else:
+                    break
+            except (ValueError,IndexError):
+                print('ERROR: DATA INVALID\n')
         if symmetric == 'n':
-            port2 = input('Choose the '+SW2+' port number: ').strip()
+            while True:
+                try:
+                    port2 = input('Choose the '+SW2+' port number: ').strip()
+                    if not int(port2) in [i for i in range(1,49)]:
+                        print('ERROR: DATA INVALID\n')
+                    else:
+                        break
+                except (ValueError,IndexError):
+                    print('ERROR: DATA INVALID\n')
         else:
             port2 = port1
-        flexport1 = input('Select an available U43 FLX1 port (1 - 12) in the server rack: ').strip()
-        ask_symmetric_flex = input('Use the symmetric FLX2 port '+str(int(flexport1)+24)+'? [Y/n]: ').strip().lower()
+        while True:
+            try:
+                flexport1 = input('Select an available U43 FLX1 port (1 - 12) in the server rack: ').strip()
+                if not int(flexport1) in [i for i in range(1,13)]:
+                    print('ERROR: DATA INVALID\n')
+                else:
+                    break
+            except (ValueError,IndexError):
+                print('ERROR: DATA INVALID\n')
+        while True:
+            try:
+                ask_symmetric_flex = input('Use the symmetric FLX2 port '+str(int(flexport1)+24)+'? [Y/n]: ').strip().lower()
+                if not ask_symmetric_flex in ['y','n']:
+                    print('ERROR: DATA INVALID\n')
+                else:
+                    break
+            except (ValueError,IndexError):
+                print('ERROR: DATA INVALID\n')
         if ask_symmetric_flex == 'y':
             flexport2 = str(int(flexport1)+24)
         else:
-            flexport2 = input('Select an available U43 FLX2 port (25 - 36) in the server rack: ').strip()
+            while True:
+                try:
+                    flexport2 = input('Select an available U43 FLX2 port (25 - 36) in the server rack: ').strip()
+                    if not int(flexport2) in [i for i in range(25,37)]:
+                        print('ERROR: DATA INVALID\n')
+                    else:
+                        break
+                except (ValueError,IndexError):
+                    print('ERROR: DATA INVALID\n')
         prim_flexport = flexport1 if trace == 'straight' else flexport2
         sec_flexport = flexport2 if trace == 'straight' else flexport1
         prim_idf_num = '2' if trace == 'straight' else '23'
         sec_idf_num = '23' if trace == 'straight' else '2'
-        if loc.rack == '4' or loc.rack == '9' or loc.rack == '13' or loc.rack == '17':
+        if loc.rack in ['4','9','13','17']:
             idf_port = flexport1
-        elif loc.rack == '5' or loc.rack == '10' or loc.rack == '14' or loc.rack == '18':
+        elif loc.rack in ['5','10','14','18']:
             idf_port = str(int(flexport1) + 12)
-        elif loc.rack == '6' or loc.rack == '11' or loc.rack == '15' or loc.rack == '20':
+        elif loc.rack in ['6','11','15','20']:
             idf_port = str(int(flexport1) + 24)
-        else: # if loc.rack == '8' or loc.rack == '12' or loc.rack == '16' or loc.rack == '21':
+        else: # if loc.rack in ['8','12','16','21']:
             idf_port = str(int(flexport1) + 36)
         prim_sw = priSW if pri_or_sec == 'pri' else secSW
         sec_sw = pr2SW if pri_or_sec == 'pri' else se2SW
