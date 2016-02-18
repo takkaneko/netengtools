@@ -25,10 +25,10 @@ def identify_switches(loc):
     elif loc.sr == 'iad.c4':
         sw = 'iad4'
     swprfx = sw+loc.row.zfill(2)
-    SWp1 = swprfx(loc)+'p1'
-    SWp2 = swprfx(loc)+'p2'
-    SWs1 = swprfx(loc)+'s1'
-    SWs2 = swprfx(loc)+'s2'
+    SWp1 = swprfx+'p1'
+    SWp2 = swprfx+'p2'
+    SWs1 = swprfx+'s1'
+    SWs2 = swprfx+'s2'
     return [SWp1,SWp2,SWs1,SWs2]
 
 def getUPA2():
@@ -160,6 +160,7 @@ def determine_trace_SJC(loc):
         trace = 'straight'
     else:
         trace = 'reversed'
+    return trace
 
 
 
