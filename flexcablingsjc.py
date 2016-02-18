@@ -3,119 +3,33 @@
 
 import re
 import pexpect
-from pexpect import EOF
-from pexpect import TIMEOUT
-from pexpect import ExceptionPexpect
+from pexpect import EOF,TIMEOUT,ExceptionPexpect
 from locationcode import Loccode
+from flexresources import identify_switches,getUPA2,getSID,os_and_speed,getLOC_SJC
+from flexresources import idf_U_number_SJC,determine_trace_SJC
 
 def main():
-    def swprfx(loc):
-        loc = Loccode(loc)
-        if loc.sr == 'sjc.c10':
-            sw = 'sjc1'
-        elif loc.sr == 'sjc.c4':
-            sw = 'sjc4'
-        elif loc.sr == 'sjc.c9':
-            sw = 'sjc9'
-        elif loc.sr == 'iad.c4':
-            sw = 'iad4'
-        return sw+loc.row.zfill(2)
-    import getpass
-    username = ''
-    while username == '':
-        username = input('Enter your tacacs username: ').strip().lower()
-    password = ''
-    while password == '':
-        password = getpass.getpass(prompt='Enter your tacacs password: ',stream=None).strip()
-    while True:
-        try:
-            alloc = input('Enter an allocation/depth codes (e.g, "nttages-9902"): ').strip().lower()
-            if not re.match(r"\w+-\d{4}",alloc):
-                print('ERROR: DATA INVALID\n')
-            else:
-                break
-        except ValueError:
-            print('ERROR: DATA INVALID\n')
+    # Prompt for username, password, and alloccode-depth (alloc)
+    [username,password,alloc] = getUPA2()
     
-    while True:
-        try:
-            sid = input('Enter a server ID: ').strip().lower()
-            if not re.match(r"^[a-z]+\d{5}$",sid):
-                print('ERROR: DATA INVALID\n')
-            else:
-                break
-        except ValueError:
-            print('ERROR: DATA INVALID\n')
-    if sid[0] == 'w' or sid[0:3] == 'itw' or sid[0:3] == 'isw':
-        os = 'windows'
-        negotiate = 'n'
-    elif sid[0] == 'l' or sid[0:3] == 'itl' or sid[0:3] == 'isl':
-        os = 'linux'
-        negotiate = 'y'
-    elif sid[0:3] == 'sun':
-        os = 'sun'
-        negotiate = 'n'
-    else:
-        os = 'other'
-    if os == 'other':
-        while True:
-            try:
-                negotiate = input('Auto negotiate [y/n]?: ').strip().lower()[0]
-                if not negotiate == 'y' and not negotiate == 'n':
-                    print('ERROR: DATA INVALID')
-                else:
-                    break
-            except (ValueError,IndexError):
-                print('ERROR: DATA INVALID')
-    if negotiate == 'n':
-        while True:
-            try:
-                speed = input('Speed (1000/100)[1000]?: ').strip() or '1000'
-                if not re.match(r"^10{2,3}$",speed):
-                    print('ERROR: DATA INVALID')
-                else:
-                    break
-            except ValueError:
-                print('ERROR: DATA INVALID')
-        duplex = 'duplex full'
-    else:
-        speed = 'auto'
-        duplex = 'no duplex'
-    spd = '100' if speed == '100' else '1000'
-    while True:
-        try:
-            loc = input('Enter a location code: ').strip().lower()
-            loc = Loccode(loc)
-            if not int(loc.rack) in [4,5,6,8,9,10,11,12,13,14,15,16,17,18,20,21]:
-                print("ERROR: INVALID LOCATION\n")
-            elif not 1<=int(loc.slot)<=12:
-                print("ERROR: INVALID LOCATION\n")
-            elif not loc.sr in ['sjc.c10','sjc.c4','sjc.c9']:
-                print("ERROR: INVALID LOCATION\n")
-            elif not int(loc.row) in [1,2,3,4]:
-                print("ERROR: INVALID LOCATION\n")
-            else:
-                break
-        except AttributeError:
-            print("ERROR: INVALID LOCATION\n")
-    if 4 <= int(loc.rack) <= 8:
-        u_num = '5'
-    elif 9 <= int(loc.rack) <= 12:
-        u_num = '4'
-    elif 13 <= int(loc.rack) <= 16:
-        u_num = '3'
-    else:
-        u_num = '2'
-    SWp1 = swprfx(loc)+'p1'
-    SWp2 = swprfx(loc)+'p2'
-    SWs1 = swprfx(loc)+'s1'
-    SWs2 = swprfx(loc)+'s2'
-    sjc_straight_racks = [4,6,9,11,13,15,17,20]
-    sjc_reverse_racks = [5,8,10,12,14,16,18,21]
-    if int(loc.rack) in sjc_straight_racks:
-        trace = 'straight'
-    else:
-        trace = 'reversed'
+    # Prompt for a server ID
+    sid = getSID()
+    
+    # Determines OS type, link settings
+    [os,negotiate,speed,duplex,spd] = os_and_speed(sid)
+
+    # Prompts for a valid location code (loc)
+    loc = getLOC_SJC()
+    
+    # U number (as a string!) of the patch panel in the IDF racks 
+    # (Will be used in cabling instructions)
+    u_num = idf_U_number_SJC(loc)
+    
+    [SWp1,SWp2,SWs1,SWs2] = identify_switches(loc)
+    
+    # trace is either 'straight' or 'reversed'
+    trace = determine_trace_SJC(loc)
+    
     priSW = SWp1 if trace == 'straight' else SWp2
     pr2SW = SWp2 if trace == 'straight' else SWp1
     secSW = SWs1 if trace == 'straight' else SWs2
