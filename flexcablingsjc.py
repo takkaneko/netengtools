@@ -157,7 +157,7 @@ def main():
         dual = 'n'
 
     if type in ['otherha','other']:
-        custom_type == ''
+        custom_type = ''
         while custom_type == '':
             custom_type = input('Name this cabling type (eg, "DMZ2", "sec3". etc.): ').strip().title()
         while True:
