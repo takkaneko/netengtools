@@ -24,7 +24,7 @@ def identify_switches(loc):
         sw = 'sjc9'
     elif loc.sr == 'iad.c4':
         sw = 'iad4'
-    swprfx sw+loc.row.zfill(2)
+    swprfx = sw+loc.row.zfill(2)
     SWp1 = swprfx(loc)+'p1'
     SWp2 = swprfx(loc)+'p2'
     SWs1 = swprfx(loc)+'s1'
