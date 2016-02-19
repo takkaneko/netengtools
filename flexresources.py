@@ -13,24 +13,6 @@ from locationcode import Loccode
 # FUNCTIONS THAT ARE COMMONLY USED FOR BOTH IAD AND SJC:
 ########################################################
 
-def identify_switches(loc):
-    # Returns the four switches (p1/p2/s1/s2) the location has connections to
-    loc = Loccode(loc)
-    if loc.sr == 'sjc.c10':
-        sw = 'sjc1'
-    elif loc.sr == 'sjc.c4':
-        sw = 'sjc4'
-    elif loc.sr == 'sjc.c9':
-        sw = 'sjc9'
-    elif loc.sr == 'iad.c4':
-        sw = 'iad4'
-    swprfx = sw+loc.row.zfill(2)
-    SWp1 = swprfx+'p1'
-    SWp2 = swprfx+'p2'
-    SWs1 = swprfx+'s1'
-    SWs2 = swprfx+'s2'
-    return [SWp1,SWp2,SWs1,SWs2]
-
 def getUPA2():
     # Appended '2' to the function name to differentiate this from the existing getUPA function
     # in resources.py file. The only difference is that alloc is actually alloccode-depth.
@@ -52,6 +34,21 @@ def getUPA2():
             print('ERROR: DATA INVALID\n')
     return [username,password,alloc]
 
+def getVLAN2():
+    # Appended '2' to the function name to differentiate this from the existing getVLAN function
+    # in resources.py file.
+    while True:
+        try:
+            vlan = int(input('Enter a VLAN ID: '))
+            if vlan <= 0 or 4096 < vlan:
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID\n')
+    return vlan
+    
+    
 def getSID():
     while True:
         try:
@@ -114,11 +111,291 @@ def os_and_speed(sid):
     spd = '100' if speed == '100' else '1000'
     return [os,negotiate,speed,duplex,spd]
 
+def identify_switches(loc):
+    # Returns the four switches (p1/p2/s1/s2) the location has connections to
+    loc = Loccode(loc)
+    if loc.sr == 'sjc.c10':
+        sw = 'sjc1'
+    elif loc.sr == 'sjc.c4':
+        sw = 'sjc4'
+    elif loc.sr == 'sjc.c9':
+        sw = 'sjc9'
+    elif loc.sr == 'iad.c4':
+        sw = 'iad4'
+    swprfx = sw+loc.row.zfill(2)
+    SWp1 = swprfx+'p1'
+    SWp2 = swprfx+'p2'
+    SWs1 = swprfx+'s1'
+    SWs2 = swprfx+'s2'
+    return [SWp1,SWp2,SWs1,SWs2]
+
+def identify_switch_roles(trace,SWp1,SWp2,SWs1,SWs2):
+    # Primary roles between p1 and p2, and betweeen s1 and s2
+    # depend on whether the rack is straight or reversed
+    priSW = SWp1 if trace == 'straight' else SWp2
+    pr2SW = SWp2 if trace == 'straight' else SWp1
+    secSW = SWs1 if trace == 'straight' else SWs2
+    se2SW = SWs2 if trace == 'straight' else SWs1
+    return [priSW,pr2SW,secSW,se2SW]
+
+def get_cabling_type():
+    # available cabling types are:
+    # 
+    #     HA: hbeat,vmotion,pri+,sec+,otherha
+    # Non-HA: ilo,other
+    print('Now please specify the cabling type. Available types are:')
+    print()
+    print('    hbeat: Heartbeat (HA)')
+    print('  vmotion: Vmotion (HA)')
+    print('     pri+: Add\'tl primarynet (HA)')
+    print('     sec+: Add\'tl secnet (HA)')
+    print('      ilo: Routable ilo (Non-HA)')
+    print('  otherha: Other (HA)')
+    print('    other: Other (Non-HA)')
+    while True:
+        try:
+            type = input('Cable type of your choice: ').strip().lower()
+            if not type in ['hbeat','vmotion','pri+','sec+','ilo','otherha','other']:
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except (ValueError,IndexError):
+            print('ERROR: DATA INVALID\n')
+    return type
+
+def identify_cabling_attributes(type):
+    # dual...determines if the cabling is HA or not. 
+    # custom_type...need to name the otherha/other cabling.
+    # pri_or_sec...automatically set when obvious. manually 
+    #              claim one when the type is otherha/other.
+    if type in ['hbeat','vmotion','pri+','sec+','otherha']:
+        dual = 'y'
+    else:
+        dual = 'n'
+
+    if type in ['otherha','other']:
+        custom_type = ''
+        while custom_type == '':
+            custom_type = input('Name this cabling type (eg, "DMZ2", "sec3". etc.): ').strip().title()
+        while True:
+            try:
+                pri_or_sec = input('Should this use primarynet or secnet? [pri/sec]: ').strip().lower()
+                if not pri_or_sec in ['pri','sec']:
+                    print('ERROR: DATA INVALID\n')
+                else:
+                    break
+            except (ValueError,IndexError):
+                print('ERROR: DATA INVALID\n')
+    elif type in ['hbeat','vmotion','pri+','ilo']:
+        custom_type = 'n/a'
+        pri_or_sec = 'pri'
+    else: # if type == 'sec+'
+        custom_type = 'n/a'
+        pri_or_sec = 'sec'
+    return [dual,custom_type,pri_or_sec]
+
+def typeDictionary(custom_type):
+    # a dictionary of cabling types (keys) for their associated strings (values)
+    # that will be used in configs and cabling instructions
+    typeDict = {'hbeat': ('Heartbeat','hbt','hb2'),
+          'vmotion': ('Vmotion','vmo','vm2'),
+          'pri+': ('Add\'tl primarynet', 'pri','pr2'),
+          'sec+': ('Add\'tl secnet','sec','se2'),
+          'ilo': ('Routable ilo','ilo','ilo'),
+          'otherha': (custom_type,'other','othr2'),
+          'other': (custom_type,'other','other')}
+    return typeDict
+
+def summaryView(alloc,sid,os,negotiate,loc,trace,priSW,
+                pr2SW,secSW,se2SW,vlan,type,dual,custom_type,pri_or_sec):
+    print()
+    print('You entered:')
+    print()
+    print('  Allocation-depth: '+alloc)
+    print('         Server ID: '+sid)
+    print('           OS type: '+os+' (Auto negotiate = '+negotiate+')')
+    print('     Location code: '+loc)
+    print('     This is a '+trace+' rack.')
+    print('      Prim1 Switch: '+priSW)
+    print('      Prim2 Switch: '+pr2SW)
+    print('       Sec1 Switch: '+secSW)
+    print('       Sec2 Switch: '+se2SW)
+    print('              VLAN: '+str(vlan))
+    print('      Cabling Type: '+type+' (Dual cabling = '+dual+')')
+    if type ==  'otherha' or 'other':
+        print('Custom cabling name: '+custom_type)
+        print('       Used network: '+pri_or_sec)
+
+def switch_pair(type,pri_or_sec,SWp1,SWp2,SWs1,SWs2):
+    # sw_pair is always either p1-p2 or s1-s2
+    # SW1 is always p1 or s1
+    # SW2 is always p2 or s2
+    if type == 'hbeat' or type == 'vmotion' or type == 'pri+' or type == 'ilo':
+        sw_pair = SWp1+'-'+SWp2
+        SW1 = SWp1
+        SW2 = SWp2
+    elif (type == 'otherha' or type == 'other') and pri_or_sec == 'pri':
+        sw_pair = SWp1+'-'+SWp2
+        SW1 = SWp1
+        SW2 = SWp2
+    elif (type == 'otherha' or type == 'other') and pri_or_sec == 'sec':
+        sw_pair = SWs1+'-'+SWs2
+        SW1 = SWs1
+        SW2 = SWs2
+    else: # type == 'sec+'
+        sw_pair = SWs1+'-'+SWs2
+        SW1 = SWs1
+        SW2 = SWs2
+    return [sw_pair,SW1,SW2]
+
+def check_swport_usage(sw_pair,SW1,SW2,username,password):
+    # uses pexpect to obtain switchport status outputs from SW1 and SW2
+    print()
+    input('Hit Enter to check the switchport statuses on '+sw_pair+':')
+    print()
+    for switch in [SW1,SW2]:
+        try:
+            child = pexpect.spawnu('telnet '+switch+'.dn.net')
+            child.expect('Username: ',timeout=3)
+            child.sendline(username)
+            child.expect('Password: ',timeout=3)
+            child.sendline(password)
+            child.expect('6513-'+switch+'-(sec-)*c\d{1,2}#',timeout=3)
+            print('====================================')
+            print(switch+':\n')
+            child.sendline('term len 55')
+            child.expect('6513-'+switch+'-(sec-)*c\d{1,2}#',timeout=3)
+            child.sendline('sh int status mod 4')
+            child.expect('Gi4/25',timeout=3)
+            print(child.before)
+            child.sendline('exit')
+        except (EOF,TIMEOUT,ExceptionPexpect):
+            print('ERROR: Unable to display mod 4 interface statuses from '+switch)
+            print('Try checking statuses manually instead:')
+            print()
+            print('  '+switch+':')
+            print('    sh int status mod 4')
+            print()
+
+        try:
+            child = pexpect.spawnu('telnet '+switch+'.dn.net')
+            child.expect('Username: ')
+            child.sendline(username)
+            child.expect('Password: ',timeout=3)
+            child.sendline(password)
+            child.expect('6513-'+switch+'-(sec-)*c\d{1,2}#',timeout=3)
+            child.sendline('term len 55')
+            child.expect('6513-'+switch+'-(sec-)*c\d{1,2}#',timeout=3)
+            child.sendline('sh int status mod 4 | beg Gi4/25')
+            child.expect('6513-'+switch+'-(sec-)*c\d{1,2}#',timeout=3)
+            print(child.before)
+            child.sendline('exit')
+        except (EOF,TIMEOUT,ExceptionPexpect):
+            print('ERROR: Unable to display mod 4 interface statuses from '+switch)
+            print('Try checking statuses manually instead:')
+            print()
+            print('  '+switch+':')
+            print('    sh int status mod 4')
+            print()
+
+def choose_sw1_or_sw2(SW1,SW2):
+    # Single cabling cases require a user to choose either SW1 or SW2
+    while True:
+        try:
+            use_this_switch = input('Choose '+SW1+' or '+SW2+' to use this time: ').strip().lower()
+            if not use_this_switch in [SW1,SW2]:
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except (ValueError,IndexError):
+            print('ERROR: DATA INVALID\n')
+    return use_this_switch
+
+def choose_switchport(use_this_switch):
+    # non-HA
+    while True:
+        try:
+            port = input('Choose '+use_this_switch+' module 4 SWITCHPORT number to use this time (1 - 48): ').strip()
+            if not 1<=int(port)<=48:
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except ValueError:
+            print('ERROR: DATA INVALID\n')
+    return port
+
+def choose_flexport_SJC(use_this_switch,SW1,loc):
+    # non-HA
+    flexpt_range = '1 - 12' if use_this_switch == SW1 else '25 - 36'
+    flexpt_range_real = [i for i in range(1,13)] if use_this_switch == SW1 else [i for i in range(25,37)]
+    idf_num = '2' if use_this_switch == SW1 else '23'
+    while True:
+        try:
+            flexport = input('Select an available FLEX port in the server rack ('+flexpt_range+'): ').strip()
+            if not int(flexport) in flexpt_range_real:
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except (ValueError,IndexError):
+            print('ERROR: DATA INVALID\n')
+    flxpt_base = int(flexport)%24
+    if loc.rack in ['4','9','13','17']:
+        idf_port = str(flxpt_base)
+    elif loc.rack in ['5','10','14','18']:
+        idf_port = str(flxpt_base + 12)
+    elif loc.rack in ['6','11','15','20']:
+        idf_port = str(flxpt_base + 24)
+    else: # if loc.rack in ['8','12','16','21']:
+        idf_port = str(flxpt_base + 36)
+    return [flexport,idf_port,idf_num]
+
+def print_results_SJC(sid,loc,spd,type,typeDict,flexport,idf_num,u_num,idf_port,
+                      use_this_switch,port,alloc,vlan,pri_or_sec,speed,duplex):
+    # non-HA
+    print()
+    print('*******************')
+    print('CABLING INSTUCTIONS')
+    print('*******************')
+    print()
+    print(sid+' ('+loc+')')
+    print()
+    print(typeDict[type][0]+':')
+    print()
+    print('Speed/Dup: '+spd+'/Full')
+    print()
+    print(' '+typeDict[type][0]+' interface ->')
+    print('  PURPLE STRAIGHT -> U43 purple panel port '+flexport+' ->')
+    print('  PURPLE STRAIGHT -> rack '+loc.row+'-'+idf_num)
+    print('  PURPLE STRAIGHT -> purple panel U'+u_num+' p'+idf_port+' ->')
+    print('  PURPLE STRAIGHT -> '+use_this_switch+' gi4/'+port)
+    print()
+    print('*************************')
+    print('SWITCHPORT CONFIGURATIONS')
+    print('*************************')
+    print()
+    print(use_this_switch+':')
+    print()
+    print('interface GigabitEthernet4/'+port)
+    print(' description '+loc.row+'-'+loc.rack+'-'+loc.slot+'-'+typeDict[type][1]+' '+alloc+' server - '+sid)
+    print(' switchport')
+    print(' switchport access vlan '+str(vlan))
+    if pri_or_sec == 'pri':
+        print(' switchport mode access')
+    else:
+        print(' private-vlan host-association 11 '+str(vlan))
+        print(' switchport mode private-vlan host')
+    print(' load-interval 30')
+    print(' speed '+speed)
+    print(' '+duplex)
+    print(' spanning-tree portfast edge')
+    print(' no shut')
+    print('end')
+    print()
 
 
-##################################
-# FUNCTIONS THAT ARE ONLY FOR SJC:
-##################################
+###########################################
+# FUNCTIONS THAT ARE INTENDED ONLY FOR SJC:
+###########################################
 
 def getLOC_SJC():
     # Prompts for a location and returns it as a Loccode object that is valid for SJC Boreas.
