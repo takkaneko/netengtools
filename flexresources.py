@@ -593,5 +593,234 @@ def print_results_SJC_HA(sid,loc,typeDict,type,spd,
     print('end')
     print()
 
+###########################################
+# FUNCTIONS THAT ARE INTENDED ONLY FOR IAD:
+###########################################
+
+def getLOC_IAD():
+    # Prompts for a location and returns it as a Loccode object that is valid for IAD Boreas.
+    while True:
+        try:
+            loc = input('Enter a location code: ').strip().lower()
+            loc = Loccode(loc)
+            if not int(loc.rack) in range(4,12):
+                print("ERROR: INVALID LOCATION\n")
+            elif not 1<=int(loc.slot)<=24:
+                print("ERROR: INVALID LOCATION\n")
+            elif not loc.sr in ['iad.c4']:
+                print("ERROR: INVALID LOCATION\n")
+            elif not int(loc.row) in [1,2,3,4,11]:
+                print("ERROR: INVALID LOCATION\n")
+            else:
+                break
+        except AttributeError:
+            print("ERROR: INVALID LOCATION\n")
+    return loc
+
+def idf_U_number_IAD(loc):
+    # Returns the U number (as a string) of the patch panel in the IDF racks.
+    if int(loc.rack) in [4,5,6,7]:
+        u_num = '6'
+    else: # int(loc.rack) in [8,9,10,11]
+        u_num = '5'
+    return u_num
+
+def determine_trace_IAD(loc):
+    # straight or reversed
+    iad_straight_racks = [4,6,8,10]
+    iad_reverse_racks = [5,7,9,11]
+    if int(loc.rack) in iad_straight_racks:
+        trace = 'straight'
+    else:
+        trace = 'reversed'
+    return trace
+
+def choose_flexport_IAD(use_this_switch,SW1,loc):
+    # non-HA
+    flexpt_range = '25 - 36' if use_this_switch == SW1 else '37 - 48'
+    flexpt_range_real = [i for i in range(25,37)] if use_this_switch == SW1 else [i for i in range(37,49)]
+    idf_num = '2' if use_this_switch == SW1 else '13'
+    while True:
+        try:
+            flexport = input('Select an available FLEX port in the server rack ('+flexpt_range+'): ').strip()
+            if not int(flexport) in flexpt_range_real:
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except (ValueError,IndexError):
+            print('ERROR: DATA INVALID\n')
+    flxpt_base = int(flexport)%24 if int(flexport) in range(25,37) else int(flexport)%36
+    if loc.rack in ['4','8']:
+        idf_port = str(flxpt_base)
+    elif loc.rack in ['5','9']:
+        idf_port = str(flxpt_base + 12)
+    elif loc.rack in ['6','10']:
+        idf_port = str(flxpt_base + 24)
+    else: # if loc.rack in ['7','11']:
+        idf_port = str(flxpt_base + 36)
+    return [flexport,idf_port,idf_num]
+
+def print_results_IAD(sid,loc,spd,type,typeDict,flexport,idf_num,u_num,idf_port,
+                      use_this_switch,port,alloc,vlan,pri_or_sec,speed,duplex):
+    # non-HA
+    print()
+    print('*******************')
+    print('CABLING INSTUCTIONS')
+    print('*******************')
+    print()
+    print(sid+' ('+loc+')')
+    print()
+    print(typeDict[type][0]+':')
+    print()
+    print('Speed/Dup: '+spd+'/Full')
+    print()
+    print(' '+typeDict[type][0]+' interface ->')
+    print('  PURPLE STRAIGHT -> U51 purple panel port '+flexport+' ->')
+    print('  PURPLE STRAIGHT -> rack '+loc.row+'-'+idf_num)
+    print('  PURPLE STRAIGHT -> purple panel U'+u_num+' p'+idf_port+' ->')
+    print('  PURPLE STRAIGHT -> '+use_this_switch+' gi4/'+port)
+    print()
+    print('*************************')
+    print('SWITCHPORT CONFIGURATIONS')
+    print('*************************')
+    print()
+    print(use_this_switch+':')
+    print()
+    print('interface GigabitEthernet4/'+port)
+    print(' description '+loc.row+'-'+loc.rack+'-'+loc.slot+'-'+typeDict[type][1]+' '+alloc+' server - '+sid)
+    print(' switchport')
+    print(' switchport access vlan '+str(vlan))
+    if pri_or_sec == 'pri':
+        print(' switchport mode access')
+    else:
+        print(' private-vlan host-association 11 '+str(vlan))
+        print(' switchport mode private-vlan host')
+    print(' load-interval 30')
+    print(' speed '+speed)
+    print(' '+duplex)
+    print(' spanning-tree portfast edge')
+    print(' no shut')
+    print('end')
+    print()
+
+def choose_flexports_IAD_HA(trace,loc,pri_or_sec,priSW,pr2SW,secSW,se2SW,port1,port2):
+    while True:
+        try:
+            flexport1 = input('Select an available U51 FLX1 port (25 - 36) in the server rack: ').strip()
+            if not int(flexport1) in [i for i in range(25,37)]:
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except (ValueError,IndexError):
+            print('ERROR: DATA INVALID\n')
+    while True:
+        try:
+            ask_symmetric_flex = input('Use the symmetric FLX2 port '+str(int(flexport1)+12)+'? [Y/n]: ').strip().lower()
+            if not ask_symmetric_flex in ['y','n']:
+                print('ERROR: DATA INVALID\n')
+            else:
+                break
+        except (ValueError,IndexError):
+            print('ERROR: DATA INVALID\n')
+    if ask_symmetric_flex == 'y':
+        flexport2 = str(int(flexport1)+12)
+    else:
+        while True:
+            try:
+                flexport2 = input('Select an available U51 FLX2 port (37 - 48) in the server rack: ').strip()
+                if not int(flexport2) in [i for i in range(37,49)]:
+                    print('ERROR: DATA INVALID\n')
+                else:
+                    break
+            except (ValueError,IndexError):
+                print('ERROR: DATA INVALID\n')
+    prim_flexport = flexport1 if trace == 'straight' else flexport2
+    sec_flexport = flexport2 if trace == 'straight' else flexport1
+    prim_idf_num = '2' if trace == 'straight' else '13'
+    sec_idf_num = '13' if trace == 'straight' else '2'
+    flxpt_base = str(int(flexport1)%24)
+    if loc.rack in ['4','8']:
+        idf_port = flxpt_base
+    elif loc.rack in ['5','9']:
+        idf_port = str(int(flxpt_base) + 12)
+    elif loc.rack in ['6','10']:
+        idf_port = str(int(flxpt_base) + 24)
+    else: # if loc.rack in ['7','11']:
+        idf_port = str(int(flxpt_base) + 36)
+    prim_sw = priSW if pri_or_sec == 'pri' else secSW
+    sec_sw = pr2SW if pri_or_sec == 'pri' else se2SW
+    prim_port = port1 if trace == 'straight' else port2
+    sec_port = port2 if trace == 'straight' else port1
+    return [prim_flexport,sec_flexport,idf_port,prim_idf_num,sec_idf_num,prim_sw,sec_sw,prim_port,sec_port]
+
+def print_results_IAD_HA(sid,loc,typeDict,type,spd,
+                         prim_flexport,prim_idf_num,u_num,
+                         idf_port,prim_sw,prim_port,
+                         sec_flexport,sec_idf_num,sec_sw,sec_port,
+                         alloc,vlan,pri_or_sec,speed,duplex):
+    print()
+    print('*******************')
+    print('CABLING INSTUCTIONS')
+    print('*******************')
+    print()
+    print(sid+' ('+loc+')')
+    print()
+    print(typeDict[type][0]+':')
+    print()
+    print('Speed/Dup: '+spd+'/Full')
+    print()
+    print(' '+typeDict[type][0]+' prim.interface ->')
+    print('  PURPLE STRAIGHT -> U51 purple panel port '+prim_flexport+' ->')
+    print('  PURPLE STRAIGHT -> rack '+loc.row+'-'+prim_idf_num)
+    print('  PURPLE STRAIGHT -> purple panel U'+u_num+' p'+idf_port+' ->')
+    print('  PURPLE STRAIGHT -> '+prim_sw+' gi4/'+prim_port)
+    print()
+    print(' '+typeDict[type][0]+' sec.interface ->')
+    print('  PURPLE STRAIGHT -> U51 purple panel port '+sec_flexport+' ->')
+    print('  PURPLE STRAIGHT -> rack '+loc.row+'-'+sec_idf_num)
+    print('  PURPLE STRAIGHT -> purple panel U'+u_num+' p'+idf_port+' ->')
+    print('  PURPLE STRAIGHT -> '+sec_sw+' gi4/'+sec_port)
+    print()
+    print('*************************')
+    print('SWITCHPORT CONFIGURATIONS')
+    print('*************************')
+    print()
+    print(prim_sw+':')
+    print()
+    print('interface GigabitEthernet4/'+prim_port)
+    print(' description '+loc.row+'-'+loc.rack+'-'+loc.slot+'-'+typeDict[type][1]+' '+alloc+' server - '+sid)
+    print(' switchport')
+    print(' switchport access vlan '+str(vlan))
+    if pri_or_sec == 'pri':
+        print(' switchport mode access')
+    else:
+        print(' private-vlan host-association 11 '+str(vlan))
+        print(' switchport mode private-vlan host')
+    print(' load-interval 30')
+    print(' speed '+speed)
+    print(' '+duplex)
+    print(' spanning-tree portfast edge')
+    print(' no shut')
+    print('end')
+    print()
+    print(sec_sw+':')
+    print()
+    print('interface GigabitEthernet4/'+sec_port)
+    print(' description '+loc.row+'-'+loc.rack+'-'+loc.slot+'-'+typeDict[type][2]+' '+alloc+' server - '+sid)
+    print(' switchport')
+    print(' switchport access vlan '+str(vlan))
+    if pri_or_sec == 'pri':
+        print(' switchport mode access')
+    else:
+        print(' private-vlan host-association 11 '+str(vlan))
+        print(' switchport mode private-vlan host')
+    print(' load-interval 30')
+    print(' speed '+speed)
+    print(' '+duplex)
+    print(' spanning-tree portfast edge')
+    print(' no shut')
+    print('end')
+    print()
+
 
 
