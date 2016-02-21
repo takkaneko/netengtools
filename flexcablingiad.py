@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # flexcablingiad.py
 
-import re
-import pexpect
-from pexpect import EOF,TIMEOUT,ExceptionPexpect
-from locationcode import Loccode
 from flexresources import getUPA2,getVLAN2,getSID,os_and_speed,getLOC_IAD,idf_U_number_IAD
 from flexresources import determine_trace_IAD,identify_switches,identify_switch_roles
 from flexresources import get_cabling_type,identify_cabling_attributes,typeDictionary
