@@ -360,6 +360,17 @@ def choose_switchports_HA(SW1,SW2,symmetric):
         port2 = port1
     return [port1,port2]
 
+def ask_more():
+    while True:
+        try:
+            more = input('More server(s) for the same segment/type?[y/N]: ').strip().lower()[0]
+            if not more in ['y','n']:
+                print('ERROR: DATA INVALID; TRY AGAIN\n')
+            else:
+                break
+        except IndexError:
+            print('ERROR: DATA INVALID; TRY AGAIN\n')
+    return more
 
 ###########################################
 # FUNCTIONS THAT ARE INTENDED ONLY FOR SJC:
