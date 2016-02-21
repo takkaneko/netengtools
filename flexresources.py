@@ -360,10 +360,11 @@ def choose_switchports_HA(SW1,SW2,symmetric):
         port2 = port1
     return [port1,port2]
 
-def ask_more():
+def ask_more(vlan,type):
     while True:
         try:
-            more = input('More server(s) for the same segment/type?[y/N]: ').strip().lower()[0]
+            more = input('Need to provision more server(s) for the same segment/type '
+                         '(VLAN'+str(vlan)+'/'+type+')?[y/N]: ').strip().lower()[0]
             if not more in ['y','n']:
                 print('ERROR: DATA INVALID; TRY AGAIN\n')
             else:

@@ -17,6 +17,7 @@ def main():
     vlan = getVLAN2()
 
     more = 'y'
+    count = 0
     while more == 'y':
         # Prompt for a server ID
         sid = getSID()
@@ -38,24 +39,29 @@ def main():
         
         [priSW,pr2SW,secSW,se2SW] = identify_switch_roles(trace,SWp1,SWp2,SWs1,SWs2)
 
-        # Prompt for a cabling type
-        type = get_cabling_type()
+        if count == 0:
+            # Prompt for a cabling type
+            type = get_cabling_type()
         
-        # Three key attributes are determined by the selection of cabling type done above
-        [dual,custom_type,pri_or_sec] = identify_cabling_attributes(type)
+            # Three key attributes are determined by the selection of cabling type done above
+            [dual,custom_type,pri_or_sec] = identify_cabling_attributes(type)
         
-        typeDict = typeDictionary(custom_type)
-        
+            typeDict = typeDictionary(custom_type)
+        else:
+            pass
         summaryView(alloc,sid,os,negotiate,loc,trace,priSW,
                     pr2SW,secSW,se2SW,vlan,type,dual,custom_type,pri_or_sec)
 
-        # Switch/port selections start here
-        # SW1 is p1 or s1
-        # SW2 is p2 or s2
-        [sw_pair,SW1,SW2] = switch_pair(type,pri_or_sec,SWp1,SWp2,SWs1,SWs2)
+        if count == 0:
+            # Switch/port selections start here
+            # SW1 is p1 or s1
+            # SW2 is p2 or s2
+            [sw_pair,SW1,SW2] = switch_pair(type,pri_or_sec,SWp1,SWp2,SWs1,SWs2)
         
-        # Shows outputs of sh int status mod 4 from SW1 then from SW2
-        check_swport_usage(sw_pair,SW1,SW2,username,password)
+            # Shows outputs of sh int status mod 4 from SW1 then from SW2
+            check_swport_usage(sw_pair,SW1,SW2,username,password)
+        else:
+            pass
 
         # Case I: Single cabling type (ilo or other).
         
@@ -92,7 +98,8 @@ def main():
                                  idf_port,prim_sw,prim_port,
                                  sec_flexport,sec_idf_num,sec_sw,sec_port,
                                  alloc,vlan,pri_or_sec,speed,duplex)
-        more = ask_more()
+        count += 1
+        more = ask_more(vlan,type)
 
 if __name__ == '__main__':
     main()
