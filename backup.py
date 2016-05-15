@@ -90,9 +90,9 @@ def collectBackups(devices):
 if __name__ == '__main__':
     choice = choose_option()
     if choice == 1:
-        devices = ALL_NW_DEVICES_IAD
+        devices = ALL_NW_DEVICES_DCA
     elif choice == 2:
-        devices = ALL_NW_DEVICES_DENVER
+        devices = ALL_NW_DEVICES_DCB
     elif choice == 3:
         devices = ALL_NW_DEVICES
     else:
