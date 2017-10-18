@@ -8,9 +8,9 @@ import pexpect
 from pexpect import EOF
 from pexpect import TIMEOUT
 from pexpect import ExceptionPexpect
-from device_lists import ALL_NW_DEVICES,ALL_NW_DEVICES_IAD,ALL_NW_DEVICES_DEN
+from device_lists import ALL_NW_DEVICES,ALL_NW_DEVICES_IAD,ALL_NW_DEVICES_SJC
 from device_lists import NX_OS_IAD,ASA_IAD,IOS_IAD,IOS_XE_IAD,IOS_XR_IAD
-from device_lists import NX_OS_DEN,ASA_DEN,IOS_DEN,IOS_XE_DEN,IOS_XR_DEN
+from device_lists import NX_OS_SJC,ASA_SJC,IOS_SJC,IOS_XE_SJC,IOS_XR_SJC
 from device_lists import MULTICONTEXT_ASA
 
 def choose_option():
@@ -59,13 +59,13 @@ def collectBackups(devices):
         print('\nCollecting backup from '+device+'...')
         username = 'i853942'
         password = 'H@rtsdale10530!'
-        if device in NX_OS_IAD + NX_OS_DEN:
+        if device in NX_OS_IAD + NX_OS_SJC:
             os = 'nxos'
-        elif device in ASA_IAD + ASA_DEN:
+        elif device in ASA_IAD + ASA_SJC:
             os = 'asa'
-        elif device in IOS_IAD + IOS_DEN:
+        elif device in IOS_IAD + IOS_SJC:
             os = 'ios'
-        elif device in IOS_XE_IAD + IOS_XE_DEN:
+        elif device in IOS_XE_IAD + IOS_XE_SJC:
             os = 'iosxe'
         else:
             os = 'iosxr'
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     if choice == 1:
         devices = ALL_NW_DEVICES_IAD
     elif choice == 2:
-        devices = ALL_NW_DEVICES_DEN
+        devices = ALL_NW_DEVICES_SJC
     elif choice == 3:
         devices = ALL_NW_DEVICES
     else:
