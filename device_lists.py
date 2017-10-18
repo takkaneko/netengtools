@@ -70,7 +70,7 @@ NX_OS_SJC = (
     'sjc-nex930009',
     'sjc-nex930010',
     'sjc-nex930011',
-    'sjc-nex93test',    DECOMM'D
+#   'sjc-nex93test',    DECOMM'D
 )
 
 ASA_SJC = (
